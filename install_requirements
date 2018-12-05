@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Install all the dependencies
+sudo apt-get install python3 -y
+sudo apt-get install python3-pip -y
+sudo apt-get install mysql-server -y
+sudo -H pip3 install flask
+sudo -H python3 -m pip install mysql-connector
+sudo -H pip3 install PyJWT
+sudo -H pip3 install requests
+sudo apt-get install libssl-dev -y
+
+

@@ -15,10 +15,8 @@ import subprocess
 import getpass
 
 app = Flask(__name__)
-
-CA_CERTIFICATE = '/etc/ssl/certs/CA_cert.pem'
 CERTIFICATE = "/etc/ssl/certs/server_cert.crt"
-KEY = "/etc/ssl/private/server_key.pem"
+KEY = "/etc/ssl/private/server_key.key"
 LIST_OF_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
                       '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '!', '@', '#', '$', ',', '.', ' ',
                       'A', 'B', 'C', 'D','E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
@@ -42,7 +40,7 @@ def create_connection():
 
 def send_email(target_email, subject, message):
     try:
-        server = smtplib.SMTP('email-smtp.us-west-2.amazonaws.com', 587)
+        server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
         server.login(EMAIL_ADDRESS, PASSWORD)

@@ -59,12 +59,12 @@
       "Security Blog"
     </title>
   </head>
-  <body background="./images/background.jpg">
+  <body background="/static/background.jpg">
     <div class="container">
       <h1 align="center">Registration</h1>
       <div class="jumbotron">
         <div
-        <form name='registration' onsubmit="return input_sanitization()" action="http://192.168.0.43/register_user" method="post">
+        <form name='registration' onsubmit="return input_sanitization()" action="http://192.168.0.43:5000/register_user" method="post">
           <table align="center">
             <tr>
               <td>First Name</td>
@@ -89,14 +89,14 @@
               </td>
             </tr>
             <tr>
+			  {{ recaptcha }}
               <td><input type="submit" value="Register!"></td>
-              <td><input type="button" value="Wait, I already have an account"></td>
+              <td><input onclick="location.href='http://192.168.0.43:5000/';" type="button" value="Wait, I already have an account"></td>
             </tr>
           </table>
           <input type="hidden" name="CSRFToken" value="">
         </form>
       </div>
     </div>
-    <script>
-    </script>
+    <script src="/static/>
   </body>

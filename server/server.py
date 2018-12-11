@@ -23,7 +23,7 @@ KEY = "/etc/ssl/private/server_key.key"
 LIST_OF_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
                       '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '!', '@', '#', '$', ',', '.', ' ',
                       'A', 'B', 'C', 'D','E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-EMAIL_ADDRESS, PASSWORD = support_email()
+
 
 
 def create_connection():
@@ -31,7 +31,7 @@ def create_connection():
         conn = mysql.connector.connect(
             host='localhost',
             user='authenticator',
-            password='d228685eeffbe3614efa0e994246dff980c5fba4b94487365877c63856527292ee90d24b1c76b92f57d4e6c165c2ed93a9283582acc3358e86ad5e2ea76f8730',
+            password='!@#d228685eeffbe3614efa0e994246dff980c5fba4b94487365877c63856527292ee90d24b1c76b92f57d4e6c165c2ed93a9283582acc3358e86ad5e2ea76f8730ABC',
             database='blog')
         return conn
 
@@ -51,6 +51,8 @@ def support_email():
 	
 	except mysql.connector.Error as e:
 		return None
+
+EMAIL_ADDRESS, PASSWORD = support_email()
 
 def send_email(target_email, subject, message):
     try:
@@ -86,20 +88,20 @@ def create_new_user(user_email, password):
 	if email_validator(user_email) == True:
 		conn = create_connection()
 		cur = conn.cursor()
-			try:
-				cur.execute('INSERT INTO users(Password, Email_ID) VALUES (%s, %s)', (hashlib.sha512(password.encode('UTF-8')).hexdigest(), user_email))
-				conn.commit() #Very important step. If not used, the changes won't reflect in the config.DATABASE
-			except mysql.connector.errors.ProgrammingError:
-				cur.close()
-				conn.close()
-				return "Database unavailable. Please try again", 503
+		try:
+			cur.execute('INSERT INTO users(Password, Email_ID) VALUES (%s, %s)', (hashlib.sha512(password.encode('UTF-8')).hexdigest(), user_email))
+			conn.commit() #Very important step. If not used, the changes won't reflect in the config.DATABASE
+		except mysql.connector.errors.ProgrammingError:
 			cur.close()
 			conn.close()
-			subject = 'IoT HomeLab Login information'
-			message = 'Hello there!\n\nCongratulations! Your account has been created on the IoT Homelab app.Please use the following are the details for it:\nUsername:' + username +'\npassword:' + original_password
-			message += "\n\nPlease change your password upon login. Have a nice day!\n\nThanks and Regards,\nIoT HomeLab"
-			send_email(user_email, subject, message)
-			return 'Insert Operation Successful', 201
+			return "Database unavailable. Please try again", 503
+		cur.close()
+		conn.close()
+		subject = 'IoT HomeLab Login information'
+		message = 'Hello there!\n\nCongratulations! Your account has been created on the IoT Homelab app.Please use the following are the details for it:\nUsername:' + username +'\npassword:' + original_password
+		message += "\n\nPlease change your password upon login. Have a nice day!\n\nThanks and Regards,\nIoT HomeLab"
+		send_email(user_email, subject, message)
+		return 'Insert Operation Successful', 201
 
 	else:
 		return 'Invalid Email Address', 400
@@ -156,6 +158,7 @@ def registration():
 	return render_template('registration.html')
 
 @app.route('/register_user', methods=['POST'])
+def register_user():
 	email = request.form.get('reg_email')
 	fName = request.form.get('reg_fname')
 	lName = request.form.get('reg_lname')
@@ -177,6 +180,7 @@ def registration():
 def logout():
 	session.pop('email', None)
 	return redirect(url_for('login'))
+
 
 
 

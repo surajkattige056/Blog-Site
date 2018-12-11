@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+	<script type="text/javascript" src="/static/sha512.js"></script>
     <!-- This part is made to make the website mobile friendly -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Latest compiled and minified CSS -->
@@ -27,12 +28,12 @@
 		  {% if message %}
 			<p style="color:red;">{{ message }}</p>
 		  {% endif %}
-          <form action="http://192.168.0.47:5000/login" method="post">
+          <form onsubmit= "return password_sha512() && input_sanitization()" action="http://192.168.0.43:5000/login" method="post">
             Email Address:<br>
             <input class = "validate_email" type="email" name="email">
             <br>
             Password:<br>
-            <input class = "validate_input" type='password' name="password">
+            <input id="login_password" class = "validate_input" type='password' name="password">
             <br><br>
             <p>{{ recaptcha }}</p>
             <input type="submit" name="login submit" value="Log In">
@@ -44,9 +45,15 @@
 		<div align="center">
 			<h3>Do you not have an account with us?</h3>
 			<h3>If you want to learn more about security concepts, please register with us!</h3>
-			<button onclick="location.href='http://192.168.0.47:5000/registration';" type="button" class="btn btn-primary">Register here</button>
+			<button onclick="location.href='http://192.168.0.43:5000/registration';" type="button" class="btn btn-primary">Register here</button>
 		</div>
       </div>
     </div>
-
+	<script type = "text/javascript">
+	function password_sha512(){
+		var shaObj = new jsSHA("SHA-512", document.getElementById('login_password').value);
+		document.getElementById('login_password').value = shaObj.getHash("HEX");
+		alert(document.getElementById('login_password').value);
+	}
+	</script>
   </body>

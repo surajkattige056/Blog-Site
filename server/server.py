@@ -139,7 +139,7 @@ def login():
 		if recaptcha.verify():
 			session['email'] = email
 			name = retrieve_name(email)
-			return render_template('home', name=name)
+			return render_template('home.html', name=name)
 		else:
 			message = "Invalid CAPTCHA code"
 			return render_template('login.html', message=message)
@@ -160,9 +160,18 @@ def registration():
 	fName = request.form.get('reg_fname')
 	lName = request.form.get('reg_lname')
 	if check_duplicate_email(email):
-		if check_password_validity(password):
-			create_new_user(fName, lName, email, password)
-			return render_template('')
+		if check_password_validity(password) and check_email_validity(email):
+			create_new_user(email, password, fName, lName)
+			result = "Successful"
+			message = "Email Address has been registered successfully. Please go to the login page and log in with your email and password. Thank you for joining us!"
+			return render_template('registration_msg.html', result=result, message=message)
+		elif check_password_validity(password) == False:
+			message = "Invalid Password. Please conform to the password rules"
+		elif check_email_validity(email):
+			message= "Invalid Email. Please enter a valid email address"
+	else:
+		message = "Email Address already exists"
+	return render_template('registration.html', message=message)
 
 @app.route('/logout',methods=['POST'])
 def logout():

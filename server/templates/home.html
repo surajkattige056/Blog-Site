@@ -40,7 +40,10 @@
     <div class="container">
       <h1 align="center"> Hello {{ name }} </h1>
       <div class="jumbotron vertical-center">
-		  <h2>WIFI Deauthentication Attack</h2>
+		  <form action="https://192.168.0.16:5000/logout" method="post">
+		    <h2>WIFI Deauthentication Attack	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="submit" value="Logout"></h2>
+		    <input type="hidden" name="CSRFToken" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgbG9nb3V0IHJlcXVlc3QifQ.dOMEQQpd-Ti7dxK44XTGGMD0r9LoEiNmmD8NRnE_Xzk">
+		  </form>
 		  <div class = "embed-responsive embed-responsive-16by9">
 			<iframe width="560" height="315" src="https://www.youtube.com/embed/KSv1ZWgpaNE?start=2" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 		  </div>
@@ -113,10 +116,11 @@
       <br />
       <div class="jumbotron vertical-center">
 		<h5>We strive to provide good articles and design a secure website for you, hence your comments are valuable to us! Please give us a feedback on the website.</h5>
-		<form onsubmit = "return input_sanitization()" action="http://192.168.0.16:5000/feedback" method = "post">
+		<form onsubmit = "return input_sanitization()" action="https://192.168.0.16:5000/feedback" method = "post">
 			<textarea class="validate_input" name="feedback"></textarea>
 			<br />
 			<input type='submit' value='Submit'>
+			<input type="hidden" name="CSRFToken" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgZmVlZGJhY2sgcGFnZSJ9.kp-nvBgrEEf0PrCdtr5ahVdu_z2y29g7zJad0FJgAAg">
 		</form>
       </div>
     </div>

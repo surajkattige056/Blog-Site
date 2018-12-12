@@ -120,24 +120,26 @@ def secret_key_generator():
 def authenticate(email, password):
 	conn = create_connection()
 	cur = conn.cursor()
-	cur.execute("SELECT fName FROM users WHERE email = ? AND password = ?", (email, password))
+	cur.execute("SELECT FName FROM users WHERE Email_ID = %s AND Password = %s", (email, password))
 	rows = cur.fetchall()
 	cur.close()
 	conn.close()
 	if len(rows) == 1:
 		return rows[0][0], True
+	return None, False
 
 
 @app.route('/', methods=['GET'])
 def root():
-	return render_template('login.html')
+	return render_template('registration.html')
 	
 
 @app.route('/login', methods=['POST'])
 def login():
 	email = request.form.get('email')
 	password = request.form.get('password')
-	if authenticate(email, password):
+	first_name, authenticity_flag = authenticate(email, password)
+	if authenticity_flag:
 		if recaptcha.verify():
 			session['email'] = email
 			name = retrieve_name(email)
@@ -149,9 +151,9 @@ def login():
 	return render_template('login.html', message=message)
 
 
-@app.route('/home', methods=['GET'])
+@app.route('/recieve_feedback', methods=['GET'])
 def home():
-	return render_template('') 
+	return render_template('home.html', message=message) 
 	
 @app.route('/registration', methods=['GET'])
 def registration():

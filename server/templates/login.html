@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-	<script type="text/javascript" src="/static/sha512.js"></script>
+	<script type="text/javascript" src="{{url_for('static', filename='sha512.js')}}"></script>
+	<script type="text/javascript" src="{{url_for('static', filename='input_validation.js')}}"></script>
     <!-- This part is made to make the website mobile friendly -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Latest compiled and minified CSS -->
@@ -9,7 +10,7 @@
 
     <!-- jQuery library -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
+-
     <!-- Popper JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
 
@@ -28,7 +29,7 @@
 		  {% if message %}
 			<p style="color:red;">{{ message }}</p>
 		  {% endif %}
-          <form onsubmit= "return password_sha512() && input_sanitization()" action="http://192.168.0.43:5000/login" method="post">
+          <form onsubmit= "return password_sha512() && input_sanitization()" action="http://192.168.0.16:5000/login" method="post">
             Email Address:<br>
             <input class = "validate_email" type="email" name="email">
             <br>
@@ -49,10 +50,11 @@
 		</div>
       </div>
     </div>
+    
 	<script type = "text/javascript">
 	function password_sha512(){
-		var shaObj = new jsSHA("SHA-512", document.getElementById('login_password').value);
-		document.getElementById('login_password').value = shaObj.getHash("HEX");
+		alert(document.getElementById('login_password').value);
+		document.getElementById('login_password').value = SHA512(document.getElementById('login_password').value);
 		alert(document.getElementById('login_password').value);
 	}
 	</script>

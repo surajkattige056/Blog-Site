@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session
 from flask_recaptcha import ReCaptcha
+from validate_email import validate_email
 import json
 import mysql.connector
 import random
@@ -90,12 +91,12 @@ def check_duplicate_email(email_id):
 	except mysql.connector.errors.ProgrammingError:
 		return 500
 
-def create_new_user(user_email, password):
+def create_new_user(user_email, password, fName, lName):
 	try:
 		password = hashlib.sha512(((hashlib.sha512(password.encode('UTF-8')).hexdigest()) + app.config['SALT']).encode('UTF-8')).hexdigest()
 		conn = create_connection()
 		cur = conn.cursor()
-		cur.execute('INSERT INTO users(Password, Email_ID, ) VALUES (%s, %s)', (password, user_email))
+		cur.execute('INSERT INTO users(Email_ID, Password, FName, LName) VALUES (%s, %s, %s, %s)', (user_email, password, fName, lName))
 		conn.commit() 
 		cur.close()
 		conn.close()
@@ -160,14 +161,17 @@ def user_disabled(email):
 		rows = cur.fetchall()
 		cur.close()
 		conn.close()
-		if int(rows[0][0])  == 1:
-			flag_last_login = check_last_login(email)
-			if flag_last_login == False:
-				return False
-			if flag_last_login == 503:
-				return 503
-			return True
-		return False
+		if len(rows) == 1:
+			if int(rows[0][0])  == 1:
+				flag_last_login = check_last_login(email)
+				if flag_last_login == False:
+					return False
+				if flag_last_login == 503:
+					return 503
+				return True
+			return False
+		else:
+			return 400
 	
 	except mysql.connector.errors.ProgrammingError:
 		return 500
@@ -259,11 +263,11 @@ def validate_password(password):
 		return True
 	return False
 	
-#@app.route('/', methods=['GET'])
-#def root():
-#	return render_template('registration.html')
-	
 @app.route('/', methods=['GET'])
+def root():
+	return render_template('login.html')
+	
+	
 @app.route('/login', methods=['POST'])
 def login():
 	if 'email' in session:
@@ -279,13 +283,15 @@ def login():
 	if validate_email(email) == False:
 		message = "Invalid username/password!"
 		return render_template('login.html', message=message)
-	if user_disabled(email):
+	if user_disabled(email) == True:
 		message = "User has been disabled! Please try again later"
 		return render_template('login.html', message=message)
 	if user_disabled(email) == 503:
 		return render_template('error.html')
+	if user_disabled(email) == 400:
+		return render_template('login.html', message='Invalid Email Address/Password')
 	first_name, authenticity_flag = authenticate(email, password)
-	if authenticity_flag:
+	if authenticity_flag == True:
 		if recaptcha.verify():
 			session['email'] = email
 			return render_template('home.html', name=first_name)
@@ -294,7 +300,7 @@ def login():
 			return render_template('login.html', message=message)
 	elif authenticity_flag == 503:
 		return render_template('error.html')
-	message = "Invalid username/password!"
+	message = "Invalid Email Address/Password!"
 	update_incorrect_login(email)
 	return render_template('login.html', message=message)
 
@@ -337,12 +343,14 @@ def register_user():
 		message= "Invalid Email. Please enter a valid email address"
 		return render_template('registration.html', message=message)
 		
-	if validate_password(password):
+	if validate_password(password) == False:
 		message = "Invalid Password. Please conform to the password rules"
 		return render_template('registration.html', message=message)
 	
 	if check_duplicate_email(email) == False:
-		create_new_user(email, password, fName, lName)
+		result, code = create_new_user(email, password, fName, lName)
+		if code == 503:
+			return redirect(url_for('/'))
 		result = "Successful"
 		message = "Email Address has been registered successfully. Please go to the login page and log in with your email and password. Thank you for joining us!"
 		return render_template('registration_msg.html', result=result, message=message)

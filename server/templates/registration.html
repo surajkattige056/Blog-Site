@@ -25,24 +25,24 @@
       <h1 align="center">Registration</h1>
       <div class="jumbotron">
         <div>
-          <form name='registration' onsubmit="return input_sanitization()" action="http://192.168.0.16:5000/register_user" method="post">
+          <form name='registration' onsubmit="return input_sanitization()" action="https://192.168.0.16:5000/register_user" method="post">
             <table align="center">
 			  {% if message %}
 				  <p style="color:red;">{{ message }}</p>
 			  {% endif %}
               <tr>
                 <td>First Name</td>
-                <td><input id = "reg_fname" class="validate_input" type="text" name="fname" required></td>
+                <td><input id = "reg_fname" class="validate_input" type="text" pattern = ".{,50}" name="reg_fname" required></td>
                 <td></td>
               </tr>
               <tr>
                 <td>Last Name</td>
-                <td><input id="reg_lname" class="validate_input" type="text" name="lname" required></td>
+                <td><input id="reg_lname" class="validate_input" type="text" pattern = ".{,50}" name="reg_lname" required></td>
                 <td></td>
               </tr>
               <tr>
                 <td>Email Address</td>
-                <td><input id="reg_email" class="validate_email" type="email" name="email"  required></td>
+                <td><input id="reg_email" class="validate_email" type="email" pattern = ".{,50}" name="reg_email"  required></td>
                 <td></td>
               </tr>
               <tr>
@@ -63,7 +63,7 @@
                 <td></td>
               </tr>
             </table>
-            <input type="hidden" name="CSRFToken" value="">
+           <input type="hidden" name="CSRFToken" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciByZWdpc3RyYXRpb24gcGFnZSJ9.w4XBU_n6NKUa1sdh6LUmZN5wnjMYyXRhyQ-46PxKWdk">
           </form>
         </div>
       </div>

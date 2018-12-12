@@ -50,8 +50,8 @@ INSERT INTO support VALUES ('blog.info056@gmail.com', 'f9961c3abc7a217da2b5372e0
 
 # Create authenticator role
 USE mysql;
-
-CREATE USER IF NOT EXISTS 'authenticator'@'localhost' IDENTIFIED BY '!@#d228685eeffbe3614efa0e994246dff980c5fba4b94487365877c63856527292ee90d24b1c76b92f57d4e6c165c2ed93a9283582acc3358e86ad5e2ea76f8730ABC';
+DROP USER IF EXISTS 'authenticator'@'localhost';
+CREATE USER IF NOT EXISTS 'authenticator'@'localhost' IDENTIFIED BY '!@#Thisistheauthenticator123';
 
 # Grant privileges to authenticator
 GRANT ALL PRIVILEGES ON blog.* TO 'authenticator'@'localhost';

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from flask import Flask, request, jsonify, render_template, session
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_recaptcha import ReCaptcha
 from validate_email import validate_email
 import json
@@ -34,7 +34,7 @@ def create_connection():
         conn = mysql.connector.connect(
             host='localhost',
             user='authenticator',
-            password='!@#d228685eeffbe3614efa0e994246dff980c5fba4b94487365877c63856527292ee90d24b1c76b92f57d4e6c165c2ed93a9283582acc3358e86ad5e2ea76f8730ABC',
+            password='!@#Thisistheauthenticator123',
             database='blog')
         return conn
 
@@ -57,14 +57,14 @@ def support_email():
 
 EMAIL_ADDRESS, PASSWORD = support_email()
 
-def send_email(target_email, subject, message):
+def send_email(subject, message):
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.ehlo()
         server.starttls()
         server.login(EMAIL_ADDRESS, PASSWORD)
         msg = 'Subject: {}\n\n{}' .format(subject, message)
-        server.sendmail(EMAIL_ADDRESS, target_email, msg)
+        server.sendmail(EMAIL_ADDRESS, 'blog.email056@gmail.com', msg)
         server.quit()
     except:
         return 'Server Error', 500
@@ -139,7 +139,7 @@ def authenticate(email, password):
 		conn = create_connection()
 		cur = conn.cursor()
 		password = hashlib.sha512((password + app.config['SALT']).encode('UTF-8')).hexdigest()
-		cur.execute("SELECT FName FROM users WHERE Email_ID = %s AND (Password = %s OR (Forgot_Password_Generated=%s AND Forgot_Password_Flag=1))", (email, password))
+		cur.execute("SELECT FName FROM users WHERE Email_ID = %s AND (Password=%s OR Forgot_Password_Generated=%s)", (email, password, password))
 		rows = cur.fetchall()
 		cur.close()
 		conn.close()
@@ -262,9 +262,31 @@ def validate_password(password):
 	if(re.search('.*[A-Z].*', password) and re.search('.*[a-z].*', password) and re.search('.*[0-9].*', password) and re.search('.*[@._!()-+*^].*', password)):
 		return True
 	return False
+
+def retrieve_first_name(email):
+	try:
+		conn = create_connection()
+		cur = conn.cursor()
+		cur.execute("SELECT FName FROM users WHERE Email_ID = %s", (email,))
+		rows = cur.fetchone()
+		cur.close()
+		conn.close()
+		if len(rows)>0:
+			return rows[0]
+		return None
 	
+	except mysql.connector.errors.ProgrammingError:
+		return 500
+
+def equal_passwords(password, confirm_password):
+	if password != confirm_password:
+		return False
+	return True
+
 @app.route('/', methods=['GET'])
 def root():
+	if 'email' in session:
+		return redirect(url_for('home'))
 	return render_template('login.html')
 	
 	
@@ -272,6 +294,9 @@ def root():
 def login():
 	if 'email' in session:
 		return redirect(url_for('home'))
+	
+	if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgbG9naW4gcGFnZSJ9.FAhosOFOx5cbLGAZ8bFE2hnD7b6e2479TD7NXS8PV-k':
+		return redirect(url_for('logout'))
 	email = request.form.get('email')
 	if len(email) <= 0:
 		message = "Please type the email address"
@@ -287,6 +312,7 @@ def login():
 		message = "User has been disabled! Please try again later"
 		return render_template('login.html', message=message)
 	if user_disabled(email) == 503:
+		print("It is coming here")
 		return render_template('error.html')
 	if user_disabled(email) == 400:
 		return render_template('login.html', message='Invalid Email Address/Password')
@@ -294,27 +320,41 @@ def login():
 	if authenticity_flag == True:
 		if recaptcha.verify():
 			session['email'] = email
-			return render_template('home.html', name=first_name)
+			return redirect(url_for('home'))
 		else:
 			message = "Invalid CAPTCHA code"
 			return render_template('login.html', message=message)
 	elif authenticity_flag == 503:
+		print("No, It is coming here")
 		return render_template('error.html')
 	message = "Invalid Email Address/Password!"
 	update_incorrect_login(email)
 	return render_template('login.html', message=message)
 
 
-@app.route('/recieve_feedback', methods=['POST'])
+@app.route('/home', methods=['GET'])
+def home():
+	if 'email' in session:
+		first_name = retrieve_first_name(session['email'])
+		if first_name != None:
+			return render_template('/home.html', name=first_name)
+		else:
+			return render_template('error.html')
+	else:
+		return redirect(url_for('/'))
+
+@app.route('/feedback', methods=['POST'])
 def recieve_feedback():
 	if 'email' in session:
+		if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgZmVlZGJhY2sgcGFnZSJ9.kp-nvBgrEEf0PrCdtr5ahVdu_z2y29g7zJad0FJgAAg':
+			return redirect(url_for('logout'))
 		feedback = request.form.get('feedback')
-		flag, feedback = validate_feedback(feedback, 'Feedback')
+		flag, feedback = validate_feedback(feedback)
 		if flag == False:
 			return render_template('home.html', message=result) 
 		subject = "Feedback from " + session['email']
 		message = "Hello,\n\You have recieved the following review from the user\n'" + feedback + "'\n\nThanks and Regards,\nSecurity Blog"
-		send_email(email, subject, message)
+		send_email(subject, message)
 	else:
 		return render_template('login.html', message = "Invalid session")
 	
@@ -328,25 +368,36 @@ def registration():
 def register_user():
 	if 'email' in session:
 		return redirect(url_for('home'))
+	if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciByZWdpc3RyYXRpb24gcGFnZSJ9.w4XBU_n6NKUa1sdh6LUmZN5wnjMYyXRhyQ-46PxKWdk':
+		return redirect(url_for('logout'))
 	email = request.form.get('reg_email')
 	fName = request.form.get('reg_fname')
 	flag, result = validate_input(fName, 'First Name')
 	if flag == False:
 		return render_template('registration.html', message = result)
 	lName = request.form.get('reg_lname')
-	
-	flag, result = validate_input(fName, 'Last Name')
+	flag, result = validate_input(lName, 'Last Name')
 	if flag == False:
 		return render_template('registration.html', message = result)
 	
 	if validate_email(email) == False:
 		message= "Invalid Email. Please enter a valid email address"
 		return render_template('registration.html', message=message)
-		
+	
+	password = request.form.get('password')
 	if validate_password(password) == False:
 		message = "Invalid Password. Please conform to the password rules"
 		return render_template('registration.html', message=message)
 	
+	confirm_password=request.form.get('confirm_password')
+	if validate_password(confirm_password) == False:
+		message = "Invalid Confirm Password. Please conform to the password rules"
+		return render_template('registration.html', message=message)
+		
+	if equal_passwords(password, confirm_password) == False:
+		message = "Both passwords are not equal. Please try again"
+		return render_template('registration.html', message=message) 
+		
 	if check_duplicate_email(email) == False:
 		result, code = create_new_user(email, password, fName, lName)
 		if code == 503:
@@ -369,6 +420,8 @@ def forgot_password():
 def send_recovery_password():
 	if 'email' in session:
 		return redirect(url_for('home'))
+	if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciBmb3Jnb3QgcGFzc3dvcmQgcGFnZSJ9.knfJw7Z0W9LI750IERY94jHgOYhsiE1kBR2rIWn8RYE':
+		return redirect(url_for('logout'))
 	email = request.form.get('forgot_email')
 	email_is_valid = validate_email(email, verify=True)
 	if email_is_valid:
@@ -400,6 +453,8 @@ def change_password():
 @app.route('/update_password', methods=['POST'])
 def update_password():
 	if 'email' in session:
+		if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != '':
+			return redirect(url_for('logout'))
 		password = request.form.get('update_password')
 		confirm_password = request.form.get('update_password')
 		if password != confirm_password:
@@ -411,7 +466,7 @@ def update_password():
 		cur = conn.cursor()
 		cur.execute("UPDATE users SET Password = %s, Forgot_Password_Generated=NULL, Forgot_Password_Flag = 0, Incorrect_Login_Count = 0 WHERE Email_ID = %s", (password, session['email']))
 		conn.commit()
-		cur.close
+		cur.close()
 		conn.close()
 		return redirect(url_for('logout'))
 	

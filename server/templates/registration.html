@@ -1,45 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<style>
-/* #tooltip {
-    position: relative;
-    display: inline-block;
-    border-bottom: 1px dotted black;
-} */
-
-#tooltip .tooltiptext {
-    visibility: hidden;
-    width: 120px;
-    background-color: #555;
-    color: #fff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 5px 0;
-    position: absolute;
-    z-index: 1;
-    bottom: 125%;
-    left: 50%;
-    margin-left: -60px;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-#tooltip .tooltiptext::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: #555 transparent transparent transparent;
-}
-
-#tooltip:hover .tooltiptext {
-    visibility: visible;
-    opacity: 1;
-}
-</style>
   <head>
 	<script type="text/javascript" src="{{url_for('static', filename='input_validation.js')}}"></script> 
     <!-- This part is made to make the website mobile friendly -->
@@ -67,6 +27,9 @@
         <div>
           <form name='registration' onsubmit="return input_sanitization()" action="http://192.168.0.16:5000/register_user" method="post">
             <table align="center">
+			  {% if message %}
+				  <p style="color:red;">{{ message }}</p>
+			  {% endif %}
               <tr>
                 <td>First Name</td>
                 <td><input id = "reg_fname" class="validate_input" type="text" name="fname" required></td>

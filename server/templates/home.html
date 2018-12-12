@@ -113,8 +113,8 @@
       <br />
       <div class="jumbotron vertical-center">
 		<h5>We strive to provide good articles and design a secure website for you, hence your comments are valuable to us! Please give us a feedback on the website.</h5>
-		<form onsubmit = "return input_sanitization()" action:http://192.168.0.16:5000/feedback method = "post">
-			<textarea class="validate_input"></textarea>
+		<form onsubmit = "return input_sanitization()" action="http://192.168.0.16:5000/feedback" method = "post">
+			<textarea class="validate_input" name="feedback"></textarea>
 			<br />
 			<input type='submit' value='Submit'>
 		</form>

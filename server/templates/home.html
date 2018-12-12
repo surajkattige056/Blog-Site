@@ -17,6 +17,7 @@
 			height:100%;
 		}
 	</style>
+	<script type="text/javascript" src="{{url_for('static', filename='input_validation.js')}}"></script> 
     <!-- This part is made to make the website mobile friendly -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Latest compiled and minified CSS -->
@@ -43,6 +44,7 @@
 		  <div class = "embed-responsive embed-responsive-16by9">
 			<iframe width="560" height="315" src="https://www.youtube.com/embed/KSv1ZWgpaNE?start=2" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 		  </div>
+		  <br />
 		  <p>The goal of this project is to demonstrate how a WiFi deauthenticator attack works. The attacker detects the WiFi network and retrieves it’s BSSID and the channel it operates on. Once done, this network will be flooded with deauthentication packets to overwhelm the network and deauthenticate all the users connected to the network.</p>
 		  <br />
 		  <h3>Architecture Overview</h3>
@@ -111,12 +113,28 @@
       <br />
       <div class="jumbotron vertical-center">
 		<h5>We strive to provide good articles and design a secure website for you, hence your comments are valuable to us! Please give us a feedback on the website.</h5>
-		<form onsubmit = "" method = "post">
-			<textarea class="validate_input"></textarea>
+		<form onsubmit = "return input_sanitization()" action="http://192.168.0.16:5000/feedback" method = "post">
+			<textarea class="validate_input" name="feedback"></textarea>
 			<br />
 			<input type='submit' value='Submit'>
 		</form>
       </div>
     </div>
+    <script>
+      var inactivityTime = function() {
+		  var t;
+		  window.onload = resetTimer;
+		  document.onmousemove = resetTimer;
+		  document.onkeypress = resetTimer;
+		  
+		  function logout() {
+			  alert("You are now logged out.")
+		  }
+		  
+		  function resetTimer() {
+			  clearTimeout(t);
+			  t = setTimeout(logout, 600000);
+		  }
+    </script>
   </body>
 </html>

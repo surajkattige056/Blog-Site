@@ -18,9 +18,11 @@ CREATE TABLE IF NOT EXISTS users(
 	FName VARCHAR(50) NOT NULL,
 	LName VARCHAR(50) NOT NULL,
 	User_Type VARCHAR(50) NOT NULL DEFAULT 'NORMAL',
-	Forgot_Password_Generated TEXT DEFAULT NULL,
+	Forgot_Password_Generated VARCHAR(128) DEFAULT NULL,
 	Forgot_Password_Flag INTEGER DEFAULT 0,
 	Incorrect_Login_Count INTEGER NOT NULL DEFAULT 0,
+	Last_Login_Attempt datetime DEFAULT NULL,
+	Successful_Login datetime DEFAULT NULL,
 	Disabled NUMERIC NOT NULL DEFAULT 0);
 
 

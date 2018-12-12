@@ -14,10 +14,12 @@ import re
 import requests
 import subprocess
 import getpass
+import os
 
 app = Flask(__name__)
 recaptcha = ReCaptcha(app=app)
-app.secret_key = b'aiOiq92!8hf_a=jfujshd;@IJN2@oJAP!@#'
+app.secret_key = os.urandom(128)
+app.config['SALT'] = '8391JSDKjskajjfgajsO@91@!*>/'
 CERTIFICATE = "/etc/ssl/certs/server_cert.crt"
 KEY = "/etc/ssl/private/server_key.key"
 LIST_OF_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -74,18 +76,23 @@ def random_password_generator(user_email):
     return password, hashlib.sha512(password.encode('UTF-8')).hexdigest()
 
 def check_duplicate_email(email_id):
-    conn = create_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE Email_ID = %s", (email_id,))
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    if len(rows)>0:
-        return True
-    return False
+    try:
+		conn = create_connection()
+		cur = conn.cursor()
+		cur.execute("SELECT * FROM users WHERE Email_ID = %s", (email_id,))
+		rows = cur.fetchall()
+		cur.close()
+		conn.close()
+		if len(rows)>0:
+			return True
+		return False
+	
+	except mysql.connector.errors.ProgrammingError:
+		return 500
 
 def create_new_user(user_email, password):
 	if email_validator(user_email) == True:
+		password = hashlib.sha512((password + app.config['SALT']).encode('UTF-8')).hexdigest()
 		conn = create_connection()
 		cur = conn.cursor()
 		try:
@@ -97,16 +104,15 @@ def create_new_user(user_email, password):
 			return "Database unavailable. Please try again", 503
 		cur.close()
 		conn.close()
-		subject = 'IoT HomeLab Login information'
-		message = 'Hello there!\n\nCongratulations! Your account has been created on the IoT Homelab app.Please use the following are the details for it:\nUsername:' + username +'\npassword:' + original_password
-		message += "\n\nPlease change your password upon login. Have a nice day!\n\nThanks and Regards,\nIoT HomeLab"
-		send_email(user_email, subject, message)
 		return 'Insert Operation Successful', 201
 
 	else:
 		return 'Invalid Email Address', 400
 
 	return 'Invalid Request', 403
+	
+
+
 
 def secret_key_generator():
     key_length = random.randint(16, 100)
@@ -118,15 +124,35 @@ def secret_key_generator():
 
 
 def authenticate(email, password):
-	conn = create_connection()
-	cur = conn.cursor()
-	cur.execute("SELECT FName FROM users WHERE Email_ID = %s AND Password = %s", (email, password))
-	rows = cur.fetchall()
-	cur.close()
-	conn.close()
-	if len(rows) == 1:
-		return rows[0][0], True
-	return None, False
+	try:
+		conn = create_connection()
+		cur = conn.cursor()
+		password = hashlib.sha512((password + app.config['SALT']).encode('UTF-8')).hexdigest()
+		cur.execute("SELECT FName FROM users WHERE Email_ID = %s AND Password = %s", (email, password))
+		rows = cur.fetchall()
+		cur.close()
+		conn.close()
+		if len(rows) == 1:
+			return rows[0][0], True
+		return None, False
+	
+	except mysql.connector.errors.ProgrammingError:
+		return None, 500
+
+def user_disabled(email):
+	try:
+		conn = create_connection()
+		cur = conn.cursor()
+		cur.execute("SELECT Disabled FROM users WHERE Email_ID = %s", (email, password))
+		rows = cur.fetchall()
+		cur.close()
+		conn.close()
+		if rows[0][0]  == 1:
+			return True
+		return False
+	
+	except mysql.connector.errors.ProgrammingError:
+		return None, 500
 
 
 @app.route('/', methods=['GET'])
@@ -138,16 +164,23 @@ def root():
 def login():
 	email = request.form.get('email')
 	password = request.form.get('password')
+	if validate_email(email) == False:
+		message = "Invalid username/password!"
+		return render_template('login.html', message=message)
+	if user_disabled(email):
+		message = "User has been disabled! Please try again later"
+		return render_template('login.html', message=message)
 	first_name, authenticity_flag = authenticate(email, password)
 	if authenticity_flag:
 		if recaptcha.verify():
 			session['email'] = email
-			name = retrieve_name(email)
-			return render_template('home.html', name=name)
+			return render_template('home.html', name=first_name)
 		else:
 			message = "Invalid CAPTCHA code"
 			return render_template('login.html', message=message)
+	elif
 	message = "Invalid username/password!"
+	update_incorrect_login(email)
 	return render_template('login.html', message=message)
 
 
@@ -178,10 +211,54 @@ def register_user():
 		message = "Email Address already exists"
 	return render_template('registration.html', message=message)
 
+
+@app.route('/forgot_password', methods=['GET'])
+def forgot_password():
+	return render_template('forgot_password.html')
+	
+@app.route('/send_recovery_password', methods=['GET'])
+def send_recovery_password():
+	email = request.form.get('forgot_email')
+	email_is_valid = validate_email(email, verify=True)
+	if email_is_valid:
+		if check_duplicate_email(email):
+			message = "A recovery password has been sent to your email address! Please follow the steps mentioned in the mail."
+			set_forgot_password(email)
+			return render_template('recovery_password_sent.html', message=message)
+		else:
+			message = "This email has not been registered. Please <a href='http://192.168.0.16:5000/registration'>register<a>"
+			return render_template('recovery_password_sent.html', message=message)
+	message = "Invalid Email. Please try again"
+	return render_template('forgot_password.html', message=message)
+	
+@app.route('/change_password', methods=['GET'])
+def change_password():
+	return render_template('change_password.html')
+
+@app.route('/update_password', methods=['POST'])
+def update_password():
+	if 'email' in session:
+		password = request.form.get('update_password')
+		confirm_password = request.form.get('update_password')
+		if password != confirm_password:
+			message = "The password fields do not match"
+			return render_template('change_password.html', message=message)
+		if validate_password(password) == False:
+			message = "Invalid password. Please conform to the password policy and try again."
+		conn = create_connection()
+		cur = conn.cursor()
+		cur.execute("UPDATE users SET Password = %s, Forgot_Password_Generated=NULL, Forgot_Password_Flag = 0, Incorrect_Login_Count = 0 WHERE Email_ID = %s", (password, session['email']))
+		conn.commit()
+		cur.close
+		conn.close()
+		return redirect(url_for('logout'))
+	
+	
 @app.route('/logout',methods=['POST'])
 def logout():
-	session.pop('email', None)
-	return redirect(url_for('login'))
+	if 'email' in session:
+		session.pop('email', None)
+	return render_template('login.html', message='User has been logged out')
 
 
 

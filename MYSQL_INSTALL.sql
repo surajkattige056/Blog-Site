@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS users(
 	Forgot_Password_Generated TEXT DEFAULT NULL,
 	Forgot_Password_Flag INTEGER DEFAULT 0,
 	Incorrect_Login_Count INTEGER NOT NULL DEFAULT 0,
+	Last_Login_Attempt datetime,
+	Successful_Login datetime,
 	Disabled NUMERIC NOT NULL DEFAULT 0);
 
 

@@ -37,6 +37,7 @@
             <input id="login_password" class = "validate_input" type='password' name="password">
             <br><br>
             <p>{{ recaptcha }}</p>
+            <a href="http://192.168.0.16:5000/forgot_password></a>
             <input type="submit" name="login submit" value="Log In">
             <input type="hidden" name="CSRFToken" value="">
           </form>
@@ -53,9 +54,7 @@
     
 	<script type = "text/javascript">
 	function password_sha512(){
-		alert(document.getElementById('login_password').value);
 		document.getElementById('login_password').value = SHA512(document.getElementById('login_password').value);
-		alert(document.getElementById('login_password').value);
 	}
 	</script>
   </body>

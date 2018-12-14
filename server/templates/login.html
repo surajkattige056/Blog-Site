@@ -29,17 +29,18 @@
 		  {% if message %}
 			<p style="color:red;">{{ message }}</p>
 		  {% endif %}
-          <form onsubmit= "return password_sha512() && input_sanitization()" action="https://192.168.0.16:5000/login" method="post">
+          <form onsubmit= "return password_sha512() && input_sanitization()" action="{{ url_for('login') }}" method="post">
             Email Address:<br>
-            <input class = "validate_email" type="email" pattern = ".{,50}" name="email">
+            <input class = "validate_email" type="email" pattern = ".{,50}" name="email" maxlength="50"required>
             <br>
             Password:<br>
-            <input id="login_password" class = "validate_input" type='password' name="password" required>
+            <input id="login_password" class = "validate_input" type='password' name="password" required title="8 characters minimum">
             <br><br>
             <p>{{ recaptcha }}</p>
-            <a href="http://192.168.0.16:5000/forgot_password"></a>
+            <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
+            <br />
             <input type="submit" name="login submit" value="Log In">
-            <input type="hidden" name="CSRFToken" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgbG9naW4gcGFnZSJ9.FAhosOFOx5cbLGAZ8bFE2hnD7b6e2479TD7NXS8PV-k">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           </form>
         </div>
       </div>
@@ -47,7 +48,7 @@
 		<div align="center">
 			<h3>Do you not have an account with us?</h3>
 			<h3>If you want to learn more about security concepts, please register with us!</h3>
-			<button onclick="location.href='https://192.168.0.16:5000/registration';" type="button" class="btn btn-primary">Register here</button>
+			<button onclick="location.href='{{ url_for('registration') }}';" type="button" class="btn btn-primary">Register here</button>
 		</div>
       </div>
     </div>

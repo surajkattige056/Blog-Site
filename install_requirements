@@ -25,10 +25,10 @@ sudo -H pip3 install requests
 sudo apt-get install libssl-dev -y
 
 # Generate a self-signed digital certificate
-openssl genrsa -out /etc/ssl/private/server_key.key 4096
+sudo openssl genrsa -out /etc/ssl/private/server_key.key 4096
 sudo mkdir -p /etc/ssl/requests
-openssl req -new -key /etc/ssl/private/server_key.key -out /etc/ssl/requests/server_req.csr
-openssl x509 -req -days 365 -in /etc/ssl/requests/server_req.csr -signkey /etc/ssl/private/server_key.key -out /etc/ssl/certs/server_cert.crt
+sudo openssl req -new -key /etc/ssl/private/server_key.key -out /etc/ssl/requests/server_req.csr
+sudo openssl x509 -req -days 365 -in /etc/ssl/requests/server_req.csr -signkey /etc/ssl/private/server_key.key -out /etc/ssl/certs/server_cert.crt
 
 # Run the mysql_secure_installation
 sudo service mysql start

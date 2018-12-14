@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, g
 from flask_recaptcha import ReCaptcha
 from validate_email import validate_email
 import json
@@ -108,9 +108,6 @@ def create_new_user(user_email, password, fName, lName):
 		return "Database unavailable. Please try again", 503
 	
 	
-
-
-
 def secret_key_generator():
     key_length = random.randint(16, 100)
     rand_phrase = ''
@@ -287,15 +284,33 @@ def equal_passwords(password, confirm_password):
 def root():
 	if 'email' in session:
 		return redirect(url_for('home'))
+	g.user = None
 	return render_template('login.html')
+
+@app.before_request
+def before_request():
+	g.user = None
+	if 'email' in session:
+		g.user=session['email']
 	
+def generate_csrf_token():
+	if '_csrf_token' not in session:
+		session['_csrf_token'] = os.urandom(128)
+	return session['_csrf_token']
 	
-@app.route('/login', methods=['POST'])
+app.jinja_env.globals['csrf_token'] = generate_csrf_token
+	
+@app.route('/login', methods=['POST', 'GET'])
 def login():
+	if request.method == 'GET':
+		if 'email' in session:
+			return redirect(url_for('home'))
 	if 'email' in session:
 		return redirect(url_for('home'))
 	
-	if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgbG9naW4gcGFnZSJ9.FAhosOFOx5cbLGAZ8bFE2hnD7b6e2479TD7NXS8PV-k':
+	if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
+		print("Token in session: " + str(session['_csrf_token']))
+		print("Token from HTML: " + request.form.get('_csrf_token'))
 		return redirect(url_for('logout'))
 	email = request.form.get('email')
 	if len(email) <= 0:
@@ -312,7 +327,6 @@ def login():
 		message = "User has been disabled! Please try again later"
 		return render_template('login.html', message=message)
 	if user_disabled(email) == 503:
-		print("It is coming here")
 		return render_template('error.html')
 	if user_disabled(email) == 400:
 		return render_template('login.html', message='Invalid Email Address/Password')
@@ -325,7 +339,6 @@ def login():
 			message = "Invalid CAPTCHA code"
 			return render_template('login.html', message=message)
 	elif authenticity_flag == 503:
-		print("No, It is coming here")
 		return render_template('error.html')
 	message = "Invalid Email Address/Password!"
 	update_incorrect_login(email)
@@ -337,16 +350,21 @@ def home():
 	if 'email' in session:
 		first_name = retrieve_first_name(session['email'])
 		if first_name != None:
-			return render_template('/home.html', name=first_name)
+			return render_template('/home.html', name=first_name.capitalize())
 		else:
 			return render_template('error.html')
 	else:
-		return redirect(url_for('/'))
+#		return render_template('login.html')
+		return redirect(url_for('login'))
 
-@app.route('/feedback', methods=['POST'])
-def recieve_feedback():
-	if 'email' in session:
-		if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgZmVlZGJhY2sgcGFnZSJ9.kp-nvBgrEEf0PrCdtr5ahVdu_z2y29g7zJad0FJgAAg':
+@app.route('/feedback', methods=['GET', 'POST'])
+def feedback():
+	if request.method == 'GET':
+		return redirect(url_for('home'))
+	
+	if g.user:
+#	if 'email' in session:
+		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 			return redirect(url_for('logout'))
 		feedback = request.form.get('feedback')
 		flag, feedback = validate_feedback(feedback)
@@ -360,15 +378,17 @@ def recieve_feedback():
 	
 @app.route('/registration', methods=['GET'])
 def registration():
-	if 'email' in session:
+	if g.user:
+#	if 'email' in session:
 		return redirect(url_for('home'))
 	return render_template('registration.html')
 
-@app.route('/register_user', methods=['POST'])
+@app.route('/register_user', methods=['GET', 'POST'])
 def register_user():
-	if 'email' in session:
-		return redirect(url_for('home'))
-	if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciByZWdpc3RyYXRpb24gcGFnZSJ9.w4XBU_n6NKUa1sdh6LUmZN5wnjMYyXRhyQ-46PxKWdk':
+	if request.method == 'GET' or g.user:
+			return redirect(url_for('home'))
+			
+	if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 		return redirect(url_for('logout'))
 	email = request.form.get('reg_email')
 	fName = request.form.get('reg_fname')
@@ -401,7 +421,7 @@ def register_user():
 	if check_duplicate_email(email) == False:
 		result, code = create_new_user(email, password, fName, lName)
 		if code == 503:
-			return redirect(url_for('/'))
+			return redirect(url_for('index'))
 		result = "Successful"
 		message = "Email Address has been registered successfully. Please go to the login page and log in with your email and password. Thank you for joining us!"
 		return render_template('registration_msg.html', result=result, message=message)
@@ -412,15 +432,17 @@ def register_user():
 
 @app.route('/forgot_password', methods=['GET'])
 def forgot_password():
-	if 'email' in session:
+	if g.user:
+#	if 'email' in session:
 		return redirect(url_for('home'))
 	return render_template('forgot_password.html')
 	
 @app.route('/send_recovery_password', methods=['GET'])
 def send_recovery_password():
-	if 'email' in session:
+	if g.user:
+#	if 'email' in session:
 		return redirect(url_for('home'))
-	if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciBmb3Jnb3QgcGFzc3dvcmQgcGFnZSJ9.knfJw7Z0W9LI750IERY94jHgOYhsiE1kBR2rIWn8RYE':
+	if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 		return redirect(url_for('logout'))
 	email = request.form.get('forgot_email')
 	email_is_valid = validate_email(email, verify=True)
@@ -446,14 +468,19 @@ def send_recovery_password():
 	
 @app.route('/change_password', methods=['GET'])
 def change_password():
-	if 'email' in session:
+	if g.user:
+#	if 'email' in session:
 		return redirect(url_for('home'))
-	return render_template('change_password.html')
+	return render_template('update_password.html')
 
-@app.route('/update_password', methods=['POST'])
+@app.route('/update_password', methods=['GET', 'POST'])
 def update_password():
-	if 'email' in session:
-		if request.form.get('CSRFToken') == None or request.form.get('CSRFToken') != '':
+	if request.method == 'GET':
+		return redirect(url_for('home'))
+		
+	if g.user:
+#	if 'email' in session:
+		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 			return redirect(url_for('logout'))
 		password = request.form.get('update_password')
 		confirm_password = request.form.get('update_password')
@@ -471,10 +498,16 @@ def update_password():
 		return redirect(url_for('logout'))
 	
 	
-@app.route('/logout',methods=['POST'])
+@app.route('/logout',methods=['GET', 'POST'])
 def logout():
-	if 'email' in session:
+	if request.method == 'GET':
+		return redirect(url_for('home'))
+	if g.user:
+#	if 'email' in session:
+		g.user = None
 		session.pop('email', None)
+		session.pop('_csrf_token', None)
+	
 	return render_template('login.html', message='User has been logged out')
 
 

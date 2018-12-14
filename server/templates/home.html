@@ -2,19 +2,11 @@
 <html lang="en">
   <head>
 	<style>
-		.iframe-container{
-			position: relative;
-			width: 100%;
-			padding-bottom: 56.25%;
-			height: 0;
-		}
-		
-		.iframe-container iframe{
-			position: absolute;
-			top:0;
-			left:0;
-			width:100%;
-			height:100%;
+		img {
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+			width: 50%;
 		}
 	</style>
 	<script type="text/javascript" src="{{url_for('static', filename='input_validation.js')}}"></script> 
@@ -40,9 +32,12 @@
     <div class="container">
       <h1 align="center"> Hello {{ name }} </h1>
       <div class="jumbotron vertical-center">
-		  <form action="https://192.168.0.16:5000/logout" method="post">
-		    <h2>WIFI Deauthentication Attack	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="submit" value="Logout"></h2>
-		    <input type="hidden" name="CSRFToken" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgbG9nb3V0IHJlcXVlc3QifQ.dOMEQQpd-Ti7dxK44XTGGMD0r9LoEiNmmD8NRnE_Xzk">
+		  <form action="{{ url_for('logout') }}" method="post">
+			  <div>
+				  <h3 align="left">WIFI Deauthentication Attack</h2>
+				  <input type="submit" value="Logout" style='float: right;'>
+			  </div>
+		    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 		  </form>
 		  <div class = "embed-responsive embed-responsive-16by9">
 			<iframe width="560" height="315" src="https://www.youtube.com/embed/KSv1ZWgpaNE?start=2" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -67,29 +62,29 @@
 		  <h4>Step 1: Switch the WiFi adapter to monitor mode</h4>
 		  <p>The WiFi adapter is operated in Promiscuous mode by default. The adapter can be switched to monitor mode by using Ifconfig and iwconfig commands as shown below.</p>
 		  <br />
-		  <img src="/static/ifconfig.jpg" class="img-responsive" align="center" alt="Oops! Something went wrong.">
+		  <img src="/static/ifconfig.jpg" class="img-responsive" alt="Oops! Something went wrong.">
 		  <p align="center"><b>Figure 1.  Interfaces on the Kali Linux System</b></p>
 		  <br />
-		  <img src="/static/monitor.jpg" class="img-responsive" align="center" alt="Oops! Something went wrong.">
+		  <img src="/static/monitor.jpg" class="img-responsive" alt="Oops! Something went wrong.">
 		  <p align="center"><b>Figure 2.  Commands to change the WiFi Adapter to Monitor mode</b></p>
 		  <br />
 		  <br />
 		  <h4>Step 2: Scan nearby available WiFi networks</h4>
 		  <p>Airodump command can be used to scan nearby wireless base stations to be deauthenticated. We will be deauthenticating users connected wireless network “Raga”. Airodump will be used to find out the BSSID and the channel in which network operates on.</p>
 		  <br />
-		  <img src="/static/airodump.jpg" class="img-responsive" max-width=100% max-height=100% align="center" alt="Oops! Something went wrong.">
+		  <img src="/static/airodump.jpg" class="img-responsive" alt="Oops! Something went wrong.">
 		  <p align="center"><b>Figure 3.  Wireless Base Stations in the systems WiFi adapter’s range</b></p>
 		  <br />
 		  <br />
 		  <h4>Step 3: Send Deauthentication Packets to the wireless base station</h4>
 		  <p>First, change the USB wireless adapters operating channel to the channel of the victim’s network. In this case, the victims network is on channel 9. Hence, we will use iwconfig to change the adapters channel of operation.</p>
 		  <br />
-		  <img src="/static/channel.jpg" class="img-responsive" align="center" alt="Oops! Something went wrong.">
+		  <img src="/static/channel.jpg" class="img-responsive" alt="Oops! Something went wrong.">
 		  <p align="center"><b>Figure 4.  Switching the adapter to same channel as the victim base station</b></p>
 		  <br />
 		  <p>Aireplay commands will be used to send deauthentication packets to the wireless base station.</p>
 		  <br />
-		  <img src="/static/aireplay.jpg" class="img-responsive" align="center" alt="Oops! Something went wrong.">
+		  <img class="img-responsive" src="/static/aireplay.jpg" alt="Oops! Something went wrong.">
 		  <p align="center"><b>FIgure 5.  Launching the deauthentication attack using aireplay-ng</b></p>
 		  <br />
 		  <p>-0: This just indicates that the comment after this specifies the number of deauthentication packets to be sent.</p>
@@ -101,7 +96,7 @@
 		  <br />
 		  <p>Once, you run the above command, the wireless adapter will send deauthentication packets and the users connected to the WiFi network will be deauthenticated.</p>
 		  <br />
-		  <img src="{{url_for('static', filename='deauth.jpg')}}" class="img-responsive" align="center" alt="Oops! Something went wrong." />
+		  <img src="{{url_for('static', filename='deauth.jpg')}}" class="img-responsive" alt="Oops! Something went wrong." />
 		  <p align="center"><b>FIgure 6.  Launching the Deauthentication attack</b></p>
 		  <br />
 		  <p>Since we will be sending infinite number of packets, the users will be unable to connect to the network until the program is forcefully stopped.</p>
@@ -116,11 +111,15 @@
       <br />
       <div class="jumbotron vertical-center">
 		<h5>We strive to provide good articles and design a secure website for you, hence your comments are valuable to us! Please give us a feedback on the website.</h5>
-		<form onsubmit = "return input_sanitization()" action="https://192.168.0.16:5000/feedback" method = "post">
-			<textarea class="validate_input" name="feedback"></textarea>
+		<form onsubmit = "return input_sanitization()" action="{{ url_for('feedback') }}" method = "post">
+			<div class="col-md-12">
+			  <textarea rows="5" class="form-control validate_input" name="feedback"></textarea>
+			</div>
 			<br />
-			<input type='submit' value='Submit'>
-			<input type="hidden" name="CSRFToken" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJUaGlzIGlzIGEgSldUIHRva2VuIGZvciB0aGUgZmVlZGJhY2sgcGFnZSJ9.kp-nvBgrEEf0PrCdtr5ahVdu_z2y29g7zJad0FJgAAg">
+			<div align="center">
+			  <input type="submit" value="Submit">
+			</div>
+			<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 		</form>
       </div>
     </div>

@@ -397,7 +397,7 @@ def feedback():
 			return render_template('home.html', message=result) 
 		subject = "Feedback from " + session['email']
 		message = 'Hello,\n\You have recieved the following review from the user\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog'
-		send_email(session['email'], subject, message)
+		send_email(EMAIL_ADDRESS, subject, message)
 		return render_template('feedback_received.html')
 	else:
 		return render_template('login.html', message = "Invalid session")

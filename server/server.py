@@ -57,14 +57,14 @@ def support_email():
 
 EMAIL_ADDRESS, PASSWORD = support_email()
 
-def send_email(subject, message):
+def send_email(target_email, subject, message):
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP('smtp.gmail.com:587')
         server.ehlo()
         server.starttls()
         server.login(EMAIL_ADDRESS, PASSWORD)
         msg = 'Subject: {}\n\n{}' .format(subject, message)
-        server.sendmail(EMAIL_ADDRESS, 'blog.email056@gmail.com', msg)
+        server.sendmail(EMAIL_ADDRESS, target_email, msg)
         server.quit()
     except:
         return 'Server Error', 500
@@ -195,7 +195,7 @@ def check_last_login(email):
 
 def update_incorrect_login(email):
 	try:
-		conn = create_database()
+		conn = create_connection()
 		cur = conn.cursor()
 		cur.execute("SELECT Incorrect_Count FROM users WHERE Email_ID=%s", (email,))
 		rows = cur.fetchone()
@@ -215,13 +215,13 @@ def update_incorrect_login(email):
 def generate_new_password(email):
 	password = 'aA@1'
 	for i in range(12):
-		password += random.choice(serverConfig.LIST_OF_CHARACTERS)
+		password += random.choice(LIST_OF_CHARACTERS)
 	return password
 
 
 def set_forgot_password(email, password):
 	try:
-		conn = create_database()
+		conn = create_connection()
 		cur = conn.cursor()
 		rows = cur.fetchone()
 		cur.execute("UPDATE users SET Incorrect_Login_Count=0, Forgot_Password_Generated=%s, Forgot_Password_Flag = 1 WHERE Email_ID=%s", (password, email))
@@ -309,8 +309,8 @@ def login():
 		return redirect(url_for('home'))
 	
 	if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-		print("Token in session: " + str(session['_csrf_token']))
-		print("Token from HTML: " + request.form.get('_csrf_token'))
+#		print("Token in session: " + str(session['_csrf_token']))
+#		print("Token from HTML: " + request.form.get('_csrf_token'))
 		return redirect(url_for('logout'))
 	email = request.form.get('email')
 	if len(email) <= 0:
@@ -371,8 +371,9 @@ def feedback():
 		if flag == False:
 			return render_template('home.html', message=result) 
 		subject = "Feedback from " + session['email']
-		message = "Hello,\n\You have recieved the following review from the user\n'" + feedback + "'\n\nThanks and Regards,\nSecurity Blog"
-		send_email(subject, message)
+		message = 'Hello,\n\You have recieved the following review from the user\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog'
+		send_email(session['email'], subject, message)
+		return render_template('feedback_received.html')
 	else:
 		return render_template('login.html', message = "Invalid session")
 	
@@ -437,7 +438,7 @@ def forgot_password():
 		return redirect(url_for('home'))
 	return render_template('forgot_password.html')
 	
-@app.route('/send_recovery_password', methods=['GET'])
+@app.route('/send_recovery_password', methods=['POST'])
 def send_recovery_password():
 	if g.user:
 #	if 'email' in session:
@@ -445,7 +446,7 @@ def send_recovery_password():
 	if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 		return redirect(url_for('logout'))
 	email = request.form.get('forgot_email')
-	email_is_valid = validate_email(email, verify=True)
+	email_is_valid = validate_email(email)
 	if email_is_valid:
 		if check_duplicate_email(email):
 			message = "A recovery password has been sent to your email address! Please follow the steps mentioned in the mail."
@@ -457,8 +458,8 @@ def send_recovery_password():
 					session.pop('email', None)
 				return render_template('error.html')
 			subject = "Security Blog Forgot Password"
-			message = "Hello there!\n\nLooks like you forgot your password. Don't you worry! Login with this password:" + password
-			send_email(email, subject, message)
+			email_message = "Hello there!\n\nLooks like you forgot your password. Don't you worry! Login with this password:" + password + '\n\nThanks and Regards,\nSecurity Blog'
+			send_email(email, subject, email_message)
 			return render_template('recovery_password_sent.html', message=message)
 		else:
 			message = "This email has not been registered. Please <a href='http://192.168.0.16:5000/registration'>register<a>"

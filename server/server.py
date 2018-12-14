@@ -295,7 +295,7 @@ def retrieve_first_name(email):
 		return None
 	
 	except mysql.connector.errors.ProgrammingError:
-		return 500
+		return 503
 
 def equal_passwords(password, confirm_password):
 	if password != confirm_password:
@@ -516,13 +516,25 @@ def update_password():
 		if validate_password(password) == False:
 			message = "Invalid password. Please conform to the password policy and try again."
 			return render_template('update_password.html', message=message)
-		conn = create_connection()
-		cur = conn.cursor()
-		cur.execute("UPDATE users SET Password = %s, Forgot_Password_Generated=NULL, Forgot_Password_Flag = 0, Incorrect_Login_Count = 0 WHERE Email_ID = %s", (password, session['email']))
-		conn.commit()
-		cur.close()
-		conn.close()
-		return redirect(url_for('logout'))
+		try:
+			password = hashlib.sha512(((hashlib.sha512(password.encode('UTF-8')).hexdigest()) + app.config['SALT']).encode('UTF-8')).hexdigest()
+			conn = create_connection()
+			cur = conn.cursor()
+			cur.execute("UPDATE users SET Password = %s, Forgot_Password_Generated=NULL, Forgot_Password_Flag = 0, Incorrect_Login_Count = 0 WHERE Email_ID = %s", (password, session['email']))
+			conn.commit()
+			cur.close()
+			conn.close()
+			
+		except mysql.connector.errors.ProgrammingError:
+			return render_template('error.html')
+			
+		if g.user:
+			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
+				redirect(url_for('home'))
+			g.user = None
+			session.pop('email', None)
+			session.pop('_csrf_token', None)
+		return render_template('password_changed.html', message='Password Changed Successfully!')
 	
 	
 @app.route('/logout',methods=['GET', 'POST'])

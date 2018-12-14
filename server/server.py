@@ -131,21 +131,43 @@ def update_correct_log(email):
 		return 503
 
 
+def check_if_forgotten_password(email, password):
+	try:
+		conn = create_connection()
+		cur = conn.cursor()
+		cur.execute("SELECT FName FROM users WHERE Email_ID=%s AND Forgot_Password_Flag = 1 AND Forgot_Password_Generated=%s", (email, password))
+		rows = cur.fetchall()
+		cur.close()
+		conn.close()
+		if len(rows) == 1:
+			return rows[0][0], True
+		return None, False
+		
+	
+	except mysql.connector.errors.ProgrammingError:
+		return 503
+
 def authenticate(email, password):
 	try:
 		conn = create_connection()
 		cur = conn.cursor()
 		password = hashlib.sha512((password + app.config['SALT']).encode('UTF-8')).hexdigest()
-		cur.execute("SELECT FName FROM users WHERE Email_ID = %s AND (Password=%s OR Forgot_Password_Generated=%s)", (email, password, password))
+		cur.execute("SELECT FName FROM users WHERE Email_ID = %s AND Password=%s", (email, password))
 		rows = cur.fetchall()
 		cur.close()
 		conn.close()
 		if len(rows) == 1:
 			flag = update_correct_log(email)
 			if flag == 503:
-				return 503, True
-			return rows[0][0], True
-		return None, False
+				return None, 503, None
+			return rows[0][0], True, 200
+		else:
+			name, flag = check_if_forgotten_password(email, password)
+			if flag == True:
+				return name, True, 201 
+			if flag == 503:
+				return None, 503, None
+		return None, False, 400
 	
 	except mysql.connector.errors.ProgrammingError:
 		return None, 503
@@ -330,14 +352,17 @@ def login():
 		return render_template('error.html')
 	if user_disabled(email) == 400:
 		return render_template('login.html', message='Invalid Email Address/Password')
-	first_name, authenticity_flag = authenticate(email, password)
-	if authenticity_flag == True:
+	first_name, authenticity_flag, code = authenticate(email, password)
+	if authenticity_flag == True and code == 200:
 		if recaptcha.verify():
 			session['email'] = email
 			return redirect(url_for('home'))
 		else:
 			message = "Invalid CAPTCHA code"
 			return render_template('login.html', message=message)
+	elif authenticity_flag == True and code == 201:
+		session['email'] = email
+		return render_template('update_password.html', name=first_name)
 	elif authenticity_flag == 503:
 		return render_template('error.html')
 	message = "Invalid Email Address/Password!"
@@ -484,12 +509,13 @@ def update_password():
 		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 			return redirect(url_for('logout'))
 		password = request.form.get('update_password')
-		confirm_password = request.form.get('update_password')
+		confirm_password = request.form.get('update_confirm_password')
 		if password != confirm_password:
 			message = "The password fields do not match"
-			return render_template('change_password.html', message=message)
+			return render_template('update_password.html', message=message)
 		if validate_password(password) == False:
 			message = "Invalid password. Please conform to the password policy and try again."
+			return render_template('update_password.html', message=message)
 		conn = create_connection()
 		cur = conn.cursor()
 		cur.execute("UPDATE users SET Password = %s, Forgot_Password_Generated=NULL, Forgot_Password_Flag = 0, Incorrect_Login_Count = 0 WHERE Email_ID = %s", (password, session['email']))
@@ -501,8 +527,6 @@ def update_password():
 	
 @app.route('/logout',methods=['GET', 'POST'])
 def logout():
-	if request.method == 'GET':
-		return redirect(url_for('home'))
 	if g.user:
 #	if 'email' in session:
 		g.user = None

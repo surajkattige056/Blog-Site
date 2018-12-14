@@ -528,10 +528,13 @@ def update_password():
 @app.route('/logout',methods=['GET', 'POST'])
 def logout():
 	if g.user:
-#	if 'email' in session:
+#	if 'email' in session
+		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
+			redirect(url_for('home'))
 		g.user = None
 		session.pop('email', None)
 		session.pop('_csrf_token', None)
+		
 	
 	return render_template('login.html', message='User has been logged out')
 

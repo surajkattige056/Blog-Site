@@ -33,6 +33,10 @@
 		<a class="navbar-brand" href="{{ url_for('home') }}">Security Blog</a>
 	    <ul class="navbar-nav ml-auto">
 		  <li class="nav-item">
+			<button onclick="location.href='{{ url_for('edit_page') }}';" type="button" class="btn btn-primary">Edit Home Page</button>
+		  </li>
+		  &nbsp;&nbsp;&nbsp;&nbsp;
+		  <li class="nav-item">
 			<form action="{{ url_for('logout') }}" method="post">
 			  <input class="btn btn-primary" type="submit" value="Logout">
 			  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -118,7 +122,7 @@
 		<h5>We strive to provide good articles and design a secure website for you, hence your comments are valuable to us! Please give us a feedback on the website.</h5>
 		<form onsubmit = "return input_sanitization()" action="{{ url_for('feedback') }}" method = "post">
 			<div class="col-md-12">
-			  <textarea rows="5" class="form-control validate_input" name="feedback" required></textarea>
+			  <textarea rows="5" class="form-control validate_input" name="feedback"></textarea>
 			</div>
 			<br />
 			<div align="center">

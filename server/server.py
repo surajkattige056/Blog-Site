@@ -325,11 +325,11 @@ def retrieve_home_page():
 	for line in fread:
 		if line.strip().startswith("<body"):
 			body_flag = True
+		
 		elif line.strip().startswith("</body"):
 			body_flag = False
-		if body_flag == True:
-			
-			output += line
+		
+		elif body_flag == True:
 #			if line.strip().startswith("<script"):
 #				script_flag = True
 			
@@ -600,9 +600,9 @@ def change_password():
 @app.route('/edit-page', methods=['GET'])
 def edit_page():
 	if g.user:
-		return redirect(url_for('home'))
-	content = retrieve_home_page()
-	return render_template('edit_page.html')
+		content = retrieve_home_page()
+		return render_template('edit_page.html', content=content)
+	return redirect(url_for('root'))
 
 @app.route('/update_password', methods=['GET', 'POST'])
 def update_password():

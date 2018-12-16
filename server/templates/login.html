@@ -35,10 +35,10 @@
             <br>
             Password:<br>
             <input id="login_password" class = "validate_input" type='password' name="password" required title="8 characters minimum">
-            <br><br>
+            <br />
             <p>{{ recaptcha }}</p>
             <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
-            <br />
+            <br /><br />
             <input class="btn btn-primary" type="submit" name="login submit" value="Log In" autocomplete="off">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           </form>

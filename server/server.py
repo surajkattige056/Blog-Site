@@ -323,7 +323,6 @@ def validate_feedback(feedback):
 # This function is used to validate the password to check if it conforms to the password rules.
 # This function will be used during the user registration to validate the passwords given there
 # @param Password given by the user during registration
-
 def validate_password(password):
 	if(len(password) < 8):
 		return False
@@ -524,8 +523,8 @@ def feedback():
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 				return redirect(url_for('logout'))
 
-			except KeyError:
-				return redirect(url_for('error'))
+		except KeyError:
+			return redirect(url_for('error'))
 		feedback = request.form.get('feedback')
 		flag, feedback = validate_feedback(feedback)
 		if flag == False:
@@ -561,8 +560,8 @@ def register_user():
 		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 			return redirect(url_for('logout'))
 
-		except KeyError:
-			return redirect(url_for('error'))
+	except KeyError:
+		return redirect(url_for('error'))
 	email = request.form.get('reg_email')
 	fName = request.form.get('reg_fname')
 	flag, result = validate_input(fName, 'First Name')
@@ -621,8 +620,8 @@ def send_recovery_password():
 		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 			return redirect(url_for('logout'))
 
-		except KeyError:
-			return redirect(url_for('error'))
+	except KeyError:
+		return redirect(url_for('error'))
 	email = request.form.get('forgot_email')
 	email_is_valid = validate_email(email)
 	if email_is_valid:
@@ -672,8 +671,8 @@ def update_password():
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 				return redirect(url_for('logout'))
 
-			except KeyError:
-				return redirect(url_for('error'))
+		except KeyError:
+			return redirect(url_for('error'))
 		password = request.form.get('update_password')
 		confirm_password = request.form.get('update_confirm_password')
 		if password != confirm_password:
@@ -710,8 +709,8 @@ def edit_page_successful():
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 				return redirect(url_for('logout'))
 
-			except KeyError:
-				return redirect(url_for('error'))
+		except KeyError:
+			return redirect(url_for('error'))
 		result = edit_home_page(request.form.get('edit_page_content'))
 		if result == True:
 			return render_template('edit_page_successful.html')
@@ -739,8 +738,8 @@ def logout():
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
 				return redirect(url_for('logout'))
 
-			except KeyError:
-				return redirect(url_for('error'))
+		except KeyError:
+			return redirect(url_for('error'))
 		g.user = None
 		session.pop('email', None)
 		session.pop('_csrf_token', None)

@@ -1,0 +1,6 @@
+./server/__pycache__
+./server/blog.log
+./server/read_file.py
+./server/server.ini
+./server/'--protocol=https'
+./idea

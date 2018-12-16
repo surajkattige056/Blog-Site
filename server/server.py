@@ -331,6 +331,7 @@ def validate_password(password):
 	if(re.search('.*[A-Z].*', password) and re.search('.*[a-z].*', password) and re.search('.*[0-9].*', password) and re.search('.*[@._!()-+*^].*', password)): #Checks if the password conforms to the password policy
 		return True
 	if(re.search('[^A-Za-z0-9.*@._!()-+*^]+', password)): #Checks if the password contains any characters that do not conform to the password policy
+		print(re.search('[^A-Za-z0-9.*@._!()-+*^]+', password))
 		return False
 	return False
 
@@ -340,7 +341,8 @@ def validate_password(password):
 # @param password recieved from the login page
 # @return Return True if it contains only alphanumeric characters, else return False
 def validate_login_password(password):
-	if password.isalpha():  # Checks if the string contains only alphanumeric characters
+	print(password)
+	if password.isalnum():  # Checks if the string contains only alphanumeric characters
 		return True
 	return False
 
@@ -472,9 +474,11 @@ def login():
 		return redirect(url_for('home'))
 	try: # This is used to handle the keyerror exception
 		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): # Check if the csrf token does not exist or if they are not equal. 
+			print("Error 1")
 			return redirect(url_for('error')) # redirect to the URL invoked by the function logout()
 
 	except KeyError: #If a keyerror exists, then send the request to error() function
+		print("Error 2")
 		return redirect(url_for('error'))
 	email = request.form.get('email') # Retrieve the email attribute from the login page
 	if len(email) <= 0: # If email is blank
@@ -482,10 +486,12 @@ def login():
 		return render_template('login.html', message=message) # Send the login.html page with the above message
 	
 	if len(email) > 50: # If the email address is greater than 50 characters, then send an error message
+		print('1')
 		message = "Invalid Email/Password"
 		return render_template('login.html', message = message)
 	
 	if validate_email(email) == False: # Validate the email and check if the email is fine or not
+		print('2')
 		message = "Invalid Email/Password!"
 		return render_template('login.html', message=message)
 	
@@ -495,6 +501,7 @@ def login():
 		return render_template('login.html', message=message)
 	
 	if disabled == 503: # Database error. Redirect to the url of error() function
+		print("Error 3")
 		return redirect(url_for('error'))
 	
 	if disabled == 400: # 400 means that it is a bad request. Keeping the errors as generic as possible to prevent fuzzing
@@ -506,7 +513,8 @@ def login():
 		return render_template('login.html', message=message)
 	
 	if validate_login_password(password) == False: # If the password does not contain alphanumeric characters
-		return render_template('login.html, message="Invalid Email/Password')
+		print('3')
+		return render_template('login.html', message="Invalid Email/Password")
 	
 	first_name, authenticity_flag, code = authenticate(email, password) #Authenticate the user
 	if authenticity_flag == True and code == 200: # The user exists
@@ -522,11 +530,14 @@ def login():
 		return render_template('update_password.html', name=first_name) #Open the update_password page
 	
 	elif authenticity_flag == 503: # Database error occurred. So redirect the user to the URL of error() function
+		print("Error 4")
 		return redirect(url_for('error'))
 	
+	print('4')
 	message = "Invalid Email Address/Password!" 
 	code = update_incorrect_login(email) #The user exists but the password was incorrect
 	if code != None and code == 503: # If database error occurs, redirect to URL of error() function
+		print("Error 5")
 		return redirect(url_for('error'))
 	return render_template('login.html', message=message) #open login.html page and display the error message
 
@@ -601,7 +612,7 @@ def registration():
 	return render_template('registration.html') #If a user session does not exist, then the user is free to register himself on the website
 
 # This function will be invoked when the user wants to send the registration information to the server
-@app.route('/register_user', methods=['GET', 'POST'])
+@app.route('/register-user', methods=['GET', 'POST'])
 def register_user():
 	if request.method == 'GET': # If a user invokes the 'GET' method instead of 'POST'
 		if g.user: # If a user session exists
@@ -661,13 +672,13 @@ def register_user():
 
 
 # This function will be used to display the forgot-password page
-@app.route('/forgot_password', methods=['GET'])
+@app.route('/forgot-password', methods=['GET'])
 def forgot_password():
 	if g.user: #If a session already exists and the user is trying to force himself/herself into this page
 		return redirect(url_for('home')) # Redirect to the home screen
 	return render_template('forgot_password.html') # If a user session does not exist, then display this page
 	
-@app.route('/send_recovery_password', methods=['GET', 'POST'])
+@app.route('/send-recovery-password', methods=['GET', 'POST'])
 def send_recovery_password():
 	if g.user: # If a user session already exists and the user is trying to force himself/herself into this page
 		return redirect(url_for('home')) # Redirect to the home page
@@ -708,14 +719,14 @@ def send_recovery_password():
 	return render_template('forgot_password.html', message=message) # Display the error message on forgot_password page
 
 # This function displays the update password page	
-@app.route('/change_password', methods=['GET'])
+@app.route('/change-password', methods=['GET'])
 def change_password():
 	if g.user: # If a user session already exists and the user is trying to force himself/herself into this page
 		return redirect(url_for('home')) # redirect the user to the home page
 	return render_template('update_password.html') # If a user session does not exist, then display the update_password.html page
 
 # This function is used to change the password of a user
-@app.route('/update_password', methods=['GET', 'POST'])
+@app.route('/update-password', methods=['GET', 'POST'])
 def update_password():
 	if request.method == 'GET': # If a user is trying to force himself/herself into this page
 		if g.user: # If a session exists
@@ -761,13 +772,30 @@ def update_password():
 @app.route('/edit-page', methods=['GET'])
 def edit_page():
 	if g.user: # If a user session exists
-		content = retrieve_home_page() # Retrieve the contents of the homepage
-		return render_template('edit_page.html', content=content) # Display the edit-page webpage and populate the contents of the textarea with the contents of the home page to be edited
+		first_name, user_type = retrieve_name_user_type(session['email']) # Retrieve the user_type and firstname
+		if user_type.upper() == 'ADMIN': # As edit-page is an admin's privilege, only the admin should be able to view this page
+			content = retrieve_home_page() # Retrieve the contents of the homepage
+			return render_template('edit_page.html', content=content) # Display the edit-page webpage and populate the contents of the textarea with the contents of the home page to be edited
+		
+		elif user_type.upper() == 'NORMAL': # If a normal user is trying to force open this page, he/she will be redirected to the home page
+			redirect(url_for('home'))
+		
+		else: # If the user type is neither admin nor normal, then redirect to the error page
+			redirect(url_for('error'))
 	return redirect(url_for('root'))
 	
 # This page will be displayed when the home page is to be edited
 @app.route('/edit-page-successful', methods=['GET', 'POST'])
 def edit_page_successful():
+	first_name, user_type = retrieve_name_user_type(session['email']) # Retrieve the user_type and firstname
+	if user_type.upper() == 'NORMAL': # If a normal user is trying to force open this link
+		if g.user: # If the user has a session
+			return redirect(url_for('home')) # Redirect to the home page
+		else: # If the user does not have any session
+			return redirect(url_for('root')) # Redirect to the login page
+	
+	if user_type != 'NORMAL' or user_type != 'ADMIN': # If the user is neither a normal user, nor an admin
+		return redirect(url_for('error')) # Redirect the user to the error page
 	if g.user: # If a user session exists
 		if request.method == 'GET': # Check if the user is trying to force himself/herself into this webpage using 'GET' request
 			return redirect(url_for('home')) #If yes, then redirect to the home page

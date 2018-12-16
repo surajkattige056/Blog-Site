@@ -1,3 +1,15 @@
+import os
+import datetime
+
+http_code = str(302) # 302 is for redirection
+timestamp = str(datetime.datetime.now())
+user = 'suraj.kattige056@gmail.com'
+request_type = "GET"
+
+message = http_code + "    " + timestamp + "    " + user + "    " + request_type
+os.system('sudo echo "' + message + '" >> ./logs/blog.log')
+
+
 def retrieve_home_page():
 	fread = open('./templates/home.html', 'r')
 	output = ""
@@ -52,5 +64,5 @@ def retrieve_no_body():
 	
 	print(output)
 
-retrieve_no_body()
+#retrieve_no_body()
 #retrieve_home_page()

@@ -27,17 +27,9 @@ CREATE TABLE IF NOT EXISTS users(
 	Successful_Login datetime DEFAULT NULL,
 	Disabled NUMERIC NOT NULL DEFAULT 0);
 
-CREATE TABLE IF NOT EXISTS logs(
-	IP_Address VARCHAR(50) NOT NULL,
-	Code INTEGER NOT NULL,
-	Message TEXT NOT NULL);
-
 CREATE TABLE IF NOT EXISTS support(
 	Email_ID VARCHAR(50) NOT NULL PRIMARY KEY,
 	Password VARCHAR(64) NOT NULL);
-
-CREATE TABLE IF NOT EXISTS version(
-	Version_ID VARCHAR(128) PRIMARY KEY);
 
 
 # Insert a value for your user
@@ -47,7 +39,6 @@ INSERT INTO users VALUES ('blog.email056@gmail.com', 'd133fe0badc737b62bce86ca3b
 INSERT INTO support VALUES ('blog.info056@gmail.com', 'f9961c3abc7a217da2b5372e0c9b7f7fc04ddf6d4ceb4cf378a17af26b1b8dac');
 
 
-
 # Create authenticator role
 USE mysql;
 DROP USER IF EXISTS 'authenticator'@'localhost';
@@ -55,6 +46,11 @@ CREATE USER IF NOT EXISTS 'authenticator'@'localhost' IDENTIFIED BY '!@#Thisisth
 
 # Grant privileges to authenticator
 GRANT ALL PRIVILEGES ON blog.* TO 'authenticator'@'localhost';
+
+
+# File for logging
+sudo mkdir -p ./server/logs
+sudo touch ./server/logs/blog.log
 
 
 

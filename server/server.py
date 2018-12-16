@@ -16,6 +16,7 @@ import requests
 import subprocess
 import getpass
 import os
+from subprocess import call
 
 # These are the initial configurations
 app = Flask(__name__)
@@ -331,7 +332,6 @@ def validate_password(password):
 	if(re.search('.*[A-Z].*', password) and re.search('.*[a-z].*', password) and re.search('.*[0-9].*', password) and re.search('.*[@._!()-+*^].*', password)): #Checks if the password conforms to the password policy
 		return True
 	if(re.search('[^A-Za-z0-9.*@._!()-+*^]+', password)): #Checks if the password contains any characters that do not conform to the password policy
-		print(re.search('[^A-Za-z0-9.*@._!()-+*^]+', password))
 		return False
 	return False
 
@@ -341,7 +341,6 @@ def validate_password(password):
 # @param password recieved from the login page
 # @return Return True if it contains only alphanumeric characters, else return False
 def validate_login_password(password):
-	print(password)
 	if password.isalnum():  # Checks if the string contains only alphanumeric characters
 		return True
 	return False
@@ -436,13 +435,18 @@ def edit_home_page(new_content):
 		fwrite.write(output) # Write the new content to the file
 		fwrite.close() # Close the file write handle
 	return True	
-		
+	
+def logger (ip_address, user, timestamp, request_type, http_code, message):
+	os.system('echo "' + ip_address + "|" + user + "|" + timestamp + "|" + request_type + "|" + http_code + "|" + message + '" >> ./logs/blog.log')
 
 # This function will be called when the index or '/' path will be invoked
 @app.route('/', methods=['GET'])
 def root():
 	if 'email' in session: # Check if the email is present in the session
+		# This is the loggin section
+		logger(request.remote_addr, session['email'], str(datetime.datetime.now()), 'GET', "302", "Redirected from login to home page")
 		return redirect(url_for('home')) # if there is a session present, then redirect to the link that will be called by the function 'home()'
+	logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "200", "Open Login Page")
 	g.user = None # If no session exists, set the global variable g.user to None
 	return render_template('login.html') # Open login.html page
 
@@ -467,78 +471,87 @@ app.jinja_env.globals['csrf_token'] = generate_csrf_token #This will be called e
 def login():
 	if request.method == 'GET': #Check the type of request. If it is a 'GET' request, then maybe the user is forcing the login request.
 		if 'email' in session: # If a session exists, then redirect this request to the url for 'home()' function
+			logger(request.remote_addr, session['email'], str(datetime.datetime.now()), 'GET', "302", "Redirected from login request to home page")
 			return redirect(url_for('home'))
 	
 	# Else it is a 'POST' request, which it is supposed to be.
 	if 'email' in session:
+		logger(request.remote_addr, session['email'], str(datetime.datetime.now()), 'POST', "302", "Redirected from login to home page")
 		return redirect(url_for('home'))
 	try: # This is used to handle the keyerror exception
-		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): # Check if the csrf token does not exist or if they are not equal. 
-			print("Error 1")
+		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): # Check if the csrf token does not exist or if they are not equal.
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Invalid CSRF Token")
 			return redirect(url_for('error')) # redirect to the URL invoked by the function logout()
 
 	except KeyError: #If a keyerror exists, then send the request to error() function
-		print("Error 2")
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "500", "CSRF Key error")
 		return redirect(url_for('error'))
 	email = request.form.get('email') # Retrieve the email attribute from the login page
 	if len(email) <= 0: # If email is blank
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Email address not entered")
 		message = "Please enter the email address" 
 		return render_template('login.html', message=message) # Send the login.html page with the above message
 	
 	if len(email) > 50: # If the email address is greater than 50 characters, then send an error message
-		print('1')
 		message = "Invalid Email/Password"
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Email address greater than 50 characters")
 		return render_template('login.html', message = message)
 	
 	if validate_email(email) == False: # Validate the email and check if the email is fine or not
-		print('2')
 		message = "Invalid Email/Password!"
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Email address invalid")
 		return render_template('login.html', message=message)
 	
 	disabled = user_disabled(email) # Check if the user is disabled
 	if disabled == True: # User is disabled 
 		message = "User has been disabled! Please try again later"
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "400", "User has been disabled")
 		return render_template('login.html', message=message)
 	
 	if disabled == 503: # Database error. Redirect to the url of error() function
-		print("Error 3")
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "503", "Database error")
 		return redirect(url_for('error'))
 	
 	if disabled == 400: # 400 means that it is a bad request. Keeping the errors as generic as possible to prevent fuzzing
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Email address/Password invalid")
 		return render_template('login.html', message='Invalid Email/Password')
 	
 	password = request.form.get('password') # Retrieve the password attribute from the login page
 	if len(password) <= 0: # If no password was entered
 		message = "Please enter the password"
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "400", "Email address not entered")
 		return render_template('login.html', message=message)
 	
 	if validate_login_password(password) == False: # If the password does not contain alphanumeric characters
-		print('3')
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "400", "Password not SHA512 Hash")
 		return render_template('login.html', message="Invalid Email/Password")
 	
 	first_name, authenticity_flag, code = authenticate(email, password) #Authenticate the user
 	if authenticity_flag == True and code == 200: # The user exists
 		if recaptcha.verify(): #Check the captcha code
 			session['email'] = email #Create a user session and store the email address of the user
+			logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "200", "User Authenticated")
 			return redirect(url_for('home')) # Redirect to the home() function
 		else:
 			message = "Invalid CAPTCHA code"
+			logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "400", "CAPTCHA Invalid")
 			return render_template('login.html', message=message)
 	
 	elif authenticity_flag == True and code == 201: # The user is authenticated, but the forgot password was used
 		session['email'] = email 
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "201", "User Authenticated with forgot password")
 		return render_template('update_password.html', name=first_name) #Open the update_password page
 	
 	elif authenticity_flag == 503: # Database error occurred. So redirect the user to the URL of error() function
-		print("Error 4")
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "503", "Database error")
 		return redirect(url_for('error'))
 	
-	print('4')
 	message = "Invalid Email Address/Password!" 
 	code = update_incorrect_login(email) #The user exists but the password was incorrect
 	if code != None and code == 503: # If database error occurs, redirect to URL of error() function
-		print("Error 5")
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "503", "Database error")
 		return redirect(url_for('error'))
+	logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Email address/Password invalid")
 	return render_template('login.html', message=message) #open login.html page and display the error message
 
 
@@ -549,19 +562,25 @@ def home():
 		first_name, user_type = retrieve_name_user_type(session['email']) #Retrieve the user's first name and user type
 		if first_name != None:
 			if user_type.upper() == 'NORMAL': # If the user is a normal user, display the normal user's home page
+				logger(request.remote_addr, session['email'] , str(datetime.datetime.now()), 'GET', "200", "Opening home page")
 				return render_template('/home.html', name=first_name.capitalize())
 			
 			elif user_type.upper() == 'ADMIN': #If it is an admin page, display the admin home page
+				logger(request.remote_addr, session['email'] , str(datetime.datetime.now()), 'GET', "200", "Opening admin home page")
 				return render_template('/home-admin.html', name=first_name.capitalize())
 			return redirect(url_for("error")) # If the user type is neither admin or normal, then there is an error. So redirect to error page
 		else: #If the user does not have a first name
+			logger(request.remote_addr, email , str(datetime.datetime.now()), 'GET', "400", "First name None")
+			logger(request.remote_addr, email , str(datetime.datetime.now()), 'GET', "302", "Redirected from home page to error page ")
 			return redirect(url_for('error')) # Redirect to the error page
 	else:
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "302", "Session Does not exist. Redirect to login page")
 		return redirect(url_for('root')) # If user session does not exist, then redirect to the login page
 
 # This function is the URL for error page
 @app.route('/error', methods=['GET'])
 def error():
+	logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "200", "Open error page")
 	return render_template('error.html') #Display the error.html page
 
 # This function will recieve the feedback from the user
@@ -569,23 +588,28 @@ def error():
 def feedback():
 	if request.method == 'GET': # The 'GET' request will occur if a user in session tries to force a user to the feedback page. The user will be automatically redirected to the URL of the home() function
 		if g.user: # If a user session exists
+			logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'GET', "302", "Redirect from feedback request to home page")
 			return redirect(url_for('home')) # Redirect to the URL of home() function
-		else: # User session does not exisst
-			return redirect(url_for('error')) # Redirect to error page 
+		else: # User session does not exist
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "302", "Session Does not exist. Redirect to login page")
+			return redirect(url_for('root')) # Redirect to error page 
 	
 	# This is for 'POST' request, which should be the right kind of request as we are posting the contents of a feedback from a user
 	if g.user: # If the user session exists
 		try:
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): #If the CSRF Token is either None or doesn't match, display the error page
+				logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "400", "Invalid CSRF Token")
 				return redirect(url_for('error'))
 
 		except KeyError:
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "500", "CSRF Key error")
 			return redirect(url_for('error'))
 		feedback = request.form.get('feedback') # Get the user feedback
 		flag, feedback = validate_feedback(feedback) #Validate the user feedback and sanitize it
 		first_name, user_type = retrieve_name_user_type(session['email']) # Retrieve the user's first name and user type
 		if flag == False: #If the feedback if not valid
 			message = "Feedback is Invalid. Please check your input and try again" # Error message
+			logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "400", "Feedback Invalid. Display error message on home page")
 			if user_type.upper() == 'NORMAL': # If the user_type is normal
 				return render_template('home.html', name=first_name, message=message) # Display home.html page
 			
@@ -593,14 +617,18 @@ def feedback():
 				return render_template('home-admin.html', name=first_name, message=message) # Display home-admin.html page
 			
 			else: # If the user is neither normal or an admin, display the error page
+				logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "400", "User type Invalid")
+				logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "302", "Redirected from feedback request to error page")
 				return redirect(url_for('error'))
 		
 		# Send the feedback of the website to the support team
 		subject = "Feedback from " + session['email'] # Subject of the email
 		message = 'Hello,\n\You have recieved the following review from the ' + first_name + '(' + session['email'] + ')\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog' # Body of the email containing the feedback of the user
 		send_email(EMAIL_ADDRESS, subject, message) # Send the email to the support team
+		logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "200", "Feedback Email sent!")
 		return render_template('feedback_received.html') # Show the feedback_recieved.html page
 	else:
+		logger(request.remote_addr, '-', str(datetime.datetime.now()), 'POST', "400", "Session is not valid")
 		return render_template('login.html', message = "Invalid session") #If the session is invalid, then display that the session is invalid
 	
 
@@ -608,7 +636,9 @@ def feedback():
 @app.route('/registration', methods=['GET'])
 def registration():
 	if g.user: #If a user exists and is trying to force himself to the registration page without logging out
+		logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "302", "Redirected from registration page to home page")
 		return redirect(url_for('home')) # Redirect the user to the home page
+	logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "200", "Display Registration page")
 	return render_template('registration.html') #If a user session does not exist, then the user is free to register himself on the website
 
 # This function will be invoked when the user wants to send the registration information to the server
@@ -616,41 +646,55 @@ def registration():
 def register_user():
 	if request.method == 'GET': # If a user invokes the 'GET' method instead of 'POST'
 		if g.user: # If a user session exists
+			logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "302", "Redirected from register user request to home page")
 			return redirect(url_for('home')) # Redirect to the home page
 		else: # If a user session does not exist
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "302", "Session Does not exist. Redirect to login page")
 			return redirect(url_for('root')) # Redirect to the login page
 			
 	try:
 		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): 
+			logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "400", "Invalid CSRF Token")
 			return redirect(url_for('error'))
 
 	except KeyError:
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "500", "CSRF Key error")
 		return redirect(url_for('error'))
-	email = request.form.get('reg_email') # Retrieve the registration email attribute from the registration page
-	fName = request.form.get('reg_fname') # Retrieve first name
-	flag, result = validate_input(fName, 'First Name') # Validate the first name
-	if flag == False: # If the First name is invalid
-		return render_template('registration.html', message = result) #Send the error message to the registration page
+	email = request.form.get('reg_email') # Retrieve the registration email 
 	lName = request.form.get('reg_lname') # Get the Last name
-	flag, result = validate_input(lName, 'Last Name') # Validate the Last name
-	if flag == False: # If last name is invalid
-		return render_template('registration.html', message = result) #send the error message to the registration page
+	password = request.form.get('password') # Retrieve the password
+	confirm_password=request.form.get('confirm_password') # Retrieve the confirm password field from the registration page
 	
-	if validate_email(email) == False: # If email is invalid [ Note: validate_email is a python library that checks for the emails validity ] 
+	flag, result = validate_input(fName, 'First Name') # Validate the first name
+	
+	if flag == False: # If the First name is invalid
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "First Name invalid")
+		return render_template('registration.html', message = result) #Send the error message to the registration page
+	
+	flag, result = validate_input(lName, 'Last Name') # Validate the Last name
+	
+	if flag == False: # If last name is invalid
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Last Name invalid")
+		return render_template('registration.html', message = result) #send the error message to the registration page
+		
+	if validate_email(email) == False: # If email is invalid [ Note: validate_email is a python library that checks for the emails validity ]
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Email address invalid")
 		message= "Invalid Email. Please enter a valid email address"
 		return render_template('registration.html', message=message) # Send the error message to the registration Page
 	
-	password = request.form.get('password') # Retrieve the password
 	if validate_password(password) == False: # If password is invalid
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Password invalid")
 		message = "Invalid Password. Please conform to the password rules"
 		return render_template('registration.html', message=message) # send the error message to the registration page
 	
-	confirm_password=request.form.get('confirm_password') # Retrieve the confirm password field from the registration page
+	
 	if validate_password(confirm_password) == False: # If confirm password is not valid
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Confirm Password invalid")
 		message = "Invalid Confirm Password. Please conform to the password rules"
 		return render_template('registration.html', message=message) # Send the error message to the registration page
 		
 	if equal_passwords(password, confirm_password) == False: #If both the password and confirm password values are not equal
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Password and Confirm password not equal")
 		message = "Both passwords are not equal. Please try again"
 		return render_template('registration.html', message=message) # Send the error message to the registration page
 		
@@ -658,15 +702,21 @@ def register_user():
 	if email_flag == False: # If the user email does not exist in the database
 		result, code = create_new_user(email, password, fName, lName) # Insert the user into the database
 		if code == 503: # Database error occurred during the create_new_user function
+			logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "503", "Database error in create_new_user function")
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "302", "Redirected from register user request to error page")
 			return redirect(url_for('error')) # Redirect to theerror page
 		result = "Successful"
 		message = "Email Address has been registered successfully. Please go to the login page and log in with your email and password. Thank you for joining us!"
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "200", "User created successfully")
 		return render_template('registration_msg.html', result=result, message=message) # Display registration successful page
 	
 	elif email_flag == True: # If email address already exists in the database
+		logger(request.remote_addr, email, str(datetime.datetime.now()), 'POST', "409", "Email Address already exists. Cannot create new user")
 		message = "Email Address already exists"
 		
 	elif email_flag == 503: # If there is a database error during check_duplicate_email function redirect to the error page
+		logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "503", "Database error in check_duplicate email function")
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "302", "Redirected from register user request to error page")
 		return redirect(url_for('error'))
 	return render_template('registration.html', message=message) # This will be executed if the email address already exists in the database
 
@@ -675,23 +725,29 @@ def register_user():
 @app.route('/forgot-password', methods=['GET'])
 def forgot_password():
 	if g.user: #If a session already exists and the user is trying to force himself/herself into this page
+		logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'GET', "302", "Redirected from forgot password page request to home page")
 		return redirect(url_for('home')) # Redirect to the home screen
+	logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "302", "Display forgot password page")
 	return render_template('forgot_password.html') # If a user session does not exist, then display this page
 	
 @app.route('/send-recovery-password', methods=['GET', 'POST'])
 def send_recovery_password():
 	if g.user: # If a user session already exists and the user is trying to force himself/herself into this page
+		logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'GET', "302", "Redirected from send recovery password request page to home page")
 		return redirect(url_for('home')) # Redirect to the home page
 	
 	
 	if request.method == 'GET': # If a user is trying to force himself/herself into this page
-			return redirect(url_for('root')) # Redirect to the login page
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "302", "Session does not exist. Redirect from send recovery password request to login page")
+		return redirect(url_for('root')) # Redirect to the login page
 			
 	try:
 		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Invalid CSRF Token")
 			return redirect(url_for('error'))
 
 	except KeyError:
+		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "500", "CSRF Key error")
 		return redirect(url_for('error'))
 	email = request.form.get('forgot_email') # Retrieve the user email who seems to have forgotten his/her password
 	email_is_valid = validate_email(email) # Check if the email is valid
@@ -702,27 +758,35 @@ def send_recovery_password():
 			hashed_password = hashlib.sha512(((hashlib.sha512(password.encode('UTF-8')).hexdigest()) + app.config['SALT']).encode('UTF-8')).hexdigest() # database password = SHA512(SHA512(generated_password) + salt)
 			flag = set_forgot_password(email, hashed_password) # Set the flags for forgot password in the database
 			if flag == 503: # If a database error occurs in set_forgot_password function
+				logger(request.remote_addr, email , str(datetime.datetime.now()), 'POST', "503", "Database Error in set_forgot_password function")
 				return redirect(url_for('error')) # Redirect to the error page
 			subject = "Security Blog Forgot Password Steps" #Subject of the email
 			email_message = "Hello there!\n\nLooks like you forgot your password. Don't you worry! Login with this password:" + password + '\n\nThanks and Regards,\nSecurity Blog' #Body of the email containing the randomly generated password to be known only to the user
 			send_email(email, subject, email_message) # Send the email
 			message = "A recovery password has been sent to your email address! Please follow the steps mentioned in the mail." # message to be displayed on the recovery_password_sent.html page
+			logger(request.remote_addr, email, str(datetime.datetime.now()), 'POST', "200", "Recovery Password sent. Display recovery password sent page")
 			return render_template('recovery_password_sent.html', message=message) # Display the recovery_password_sent page with the success message
 		
 		elif email_flag == False: # If the email does not exist in the database
+			logger(request.remote_addr, '-', str(datetime.datetime.now()), 'POST', "400", "Email Address does not exist in the database")
 			message = "This email has not been registered" # Ask the user to register
 			return render_template('recovery_password_sent.html', message=message) # Display the prompt asking for user to register his/her email on the website
 		
 		elif email_flag == 503: # If check_duplicate_email throws a database error, redirect to the error page
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "503", "Database Error in check_duplicate_email function")
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "302", "Redirected from recovery password request to error page")
 			return redirect(url_for('error'))
 	message = "Invalid Email. Please try again" # If the email is not valid
+	logger(request.remote_addr, '-', str(datetime.datetime.now()), 'POST', "400", "Email Address invalid")
 	return render_template('forgot_password.html', message=message) # Display the error message on forgot_password page
 
 # This function displays the update password page	
 @app.route('/change-password', methods=['GET'])
 def change_password():
 	if g.user: # If a user session already exists and the user is trying to force himself/herself into this page
+		logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'GET', "302", "Redirected from change password page to home page")
 		return redirect(url_for('home')) # redirect the user to the home page
+	logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'GET', "200", "Display update password page")
 	return render_template('update_password.html') # If a user session does not exist, then display the update_password.html page
 
 # This function is used to change the password of a user
@@ -730,26 +794,38 @@ def change_password():
 def update_password():
 	if request.method == 'GET': # If a user is trying to force himself/herself into this page
 		if g.user: # If a session exists
+			logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'GET', "302", "Session exists. Redirected from update password request to home page")
 			return redirect(url_for('home')) # Redirect the user to the home page
 		else: # If a session does not exist
+			logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'GET', "302", "Session does not exist. Redirected from update password request to login page")
 			return redirect(url_for('root')) # Redirect the user to the login page
 		
 	# This code is used when the request is a 'POST' method.
 	if g.user: # If a user session exists
 		try:
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
+				logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "400", "Invalid CSRF Token")
 				return redirect(url_for('error'))
 
 		except KeyError:
+			logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "500", "CSRF Key error")
 			return redirect(url_for('error'))
 		password = request.form.get('update_password') # Retrieve the update_password field from the web page
 		confirm_password = request.form.get('update_confirm_password') # Retrieve the update_confirm_password field from the webpage
 		if password != confirm_password: # If both fields are not equal
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "400", "Password and confirm password fields do not match")
 			message = "The password fields do not match"
 			return render_template('update_password.html', message=message) # Display the error message on update_password page
 		if validate_password(password) == False: # If password is not valid
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "400", "Invalid password")
 			message = "Invalid password. Please conform to the password policy and try again."
 			return render_template('update_password.html', message=message) # Display the error message on update_password page
+		
+		if validate_password(confirm_password) == False: # If password is not valid
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "400", "Invalid confirm password")
+			message = "Invalid confirm password. Please conform to the password policy and try again."
+			return render_template('update_password.html', message=message) # Display the error message on update_password page
+			
 		try:
 			password = hashlib.sha512(((hashlib.sha512(password.encode('UTF-8')).hexdigest()) + app.config['SALT']).encode('UTF-8')).hexdigest() # Database password = SHA512(SHA512(password) + salt)
 			conn = create_connection() # Connect to the database
@@ -758,6 +834,7 @@ def update_password():
 			conn.commit() # Commit the changes
 			cur.close()
 			conn.close()
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "201", "Password Updated successfully. Redirected to password changed page")
 			
 		except mysql.connector.errors.ProgrammingError:
 			return redirect(url_for('error')) 
@@ -775,13 +852,18 @@ def edit_page():
 		first_name, user_type = retrieve_name_user_type(session['email']) # Retrieve the user_type and firstname
 		if user_type.upper() == 'ADMIN': # As edit-page is an admin's privilege, only the admin should be able to view this page
 			content = retrieve_home_page() # Retrieve the contents of the homepage
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "200", "Redirected to edit page")
 			return render_template('edit_page.html', content=content) # Display the edit-page webpage and populate the contents of the textarea with the contents of the home page to be edited
 		
 		elif user_type.upper() == 'NORMAL': # If a normal user is trying to force open this page, he/she will be redirected to the home page
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "302", "User type does not have privilege to open edit page. Redirected to home page")
 			redirect(url_for('home'))
 		
 		else: # If the user type is neither admin nor normal, then redirect to the error page
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "302", "Invalid user type. Redirected to error page")
 			redirect(url_for('error'))
+			
+	logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "302", "Session does not exist. Redirecting to login page")
 	return redirect(url_for('root'))
 	
 # This page will be displayed when the home page is to be edited
@@ -790,32 +872,42 @@ def edit_page_successful():
 	first_name, user_type = retrieve_name_user_type(session['email']) # Retrieve the user_type and firstname
 	if user_type.upper() == 'NORMAL': # If a normal user is trying to force open this link
 		if g.user: # If the user has a session
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "302", "User type does not have privilege to open edit page. Redirected to home page")
 			return redirect(url_for('home')) # Redirect to the home page
 		else: # If the user does not have any session
+			logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "302", "User type does not have privilege to open edit page. Redirected to home page")
 			return redirect(url_for('root')) # Redirect to the login page
 	
 	if user_type != 'NORMAL' or user_type != 'ADMIN': # If the user is neither a normal user, nor an admin
+		logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "302", "User type Invalid. Redirected to error page")
 		return redirect(url_for('error')) # Redirect the user to the error page
 	if g.user: # If a user session exists
 		if request.method == 'GET': # Check if the user is trying to force himself/herself into this webpage using 'GET' request
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "302", "Invalid request method. Redirected to home page")
 			return redirect(url_for('home')) #If yes, then redirect to the home page
 		
 		# This body is for 'POST' request, as it is supposed to be.
 		try:
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): # Check if the CSRF Token is invalid
+				logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "400", "Invalid CSRF Token")
 				return redirect(url_for('error'))
 
 		except KeyError:
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "500", "CSRF Key error")
 			return redirect(url_for('error'))
 		result = edit_home_page(request.form.get('edit_page_content')) # Get the contents from the textarea of the edit page and edit the home pages
 		if result == True: # If the home pages was edited successfully
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "200", "Home page edited successfully. Redirecting to edit successful page")
 			return render_template('edit_page_successful.html') # Display home page edited successfully page
 		
 		elif result == False: # If there was a problem in editing the home page
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "400", "Home page edited failed. Redirecting to edit failed page")
 			return redirect(url_for('edit_page_failed')) # Redirect to the edit_page_failed function below
-			
+		
+		logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "400", "Unknown error occurred. Redirecting to error page")	
 		return redirect(url_for('error')) # Else some other error occurred. Just display the error page to keep it generic and avoid fuzzing and catching all the errors.
 	
+	logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "302", "Session does not exist. Redirecting to login page")
 	return redirect(url_for('root')) # If a user session does not exist, then redirect to the login page
 		
 
@@ -823,9 +915,21 @@ def edit_page_successful():
 @app.route('/edit-page-failed', methods=['GET'])
 def edit_page_failed():
 	if g.user: # If a user session exists
-		return render_template('edit_page.html', message="Page edit was unsuccessful. Please try again") # Display the edit_page with the error message stating the page edit was unsuccessful
-	
+		first_name, user_type = retrieve_name_user_type(session['email']) # Retrieve the user_type and firstname
+		if user_type.upper() == 'ADMIN':
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "200", "Display edit page failed.")
+			return render_template('edit_page.html', message="Page edit was unsuccessful. Please try again") # Display the edit_page with the error message stating the page edit was unsuccessful
+		
+		elif user_type.upper() == 'NORMAL': # If a normal user is trying to force open this page, he/she will be redirected to the home page
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "302", "User type does not have privilege to open edit failed page. Redirected to home page")
+			redirect(url_for('home'))
+		
+		else: # If the user type is neither admin nor normal, then redirect to the error page
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'GET', "302", "Invalid user type. Redirected to error page")
+			redirect(url_for('error'))
+		
 	else: # If a user session does not exist
+		logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "302", "Session does not exist. Redirecting to login page")
 		return redirect(url_for('root')) # Redirect to the login page
 	
 # This function will be invoked when the user wants to log out
@@ -834,15 +938,21 @@ def logout():
 	if g.user:
 		try:
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
+				logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "400", "Invalid CSRF Token")
 				return redirect(url_for('error'))
 
 		except KeyError:
+			logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "400", "Invalid CSRF Token")
 			return redirect(url_for('error'))
+		logger(request.remote_addr, g.user, str(datetime.datetime.now()), 'POST', "200", "User logged out")
 		g.user = None # Remove the user from the global session variable
 		session.pop('email', None) # Remove the user's email ID from the session
 		session.pop('_csrf_token', None) # Remove the CSRF Token value from the session
 		
-	
+		
+	else:
+		logger(request.remote_addr, '-', str(datetime.datetime.now()), 'POST', "302", "Session does not exist. Redirecting to login page")
+		return redirect(url_for('root'))
 	return render_template('login.html', message='User has been logged out') # Show the login page with message "User has been logged out"
 
 

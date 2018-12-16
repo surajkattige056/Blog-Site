@@ -1,4 +1,4 @@
-function sanitize(var s){
+function sanitize(s){
   var replacement = s.replace(/[&]/g, "&amp");
   replacement = replacement.replace(/[<]/g, "&lt");
   replacement = replacement.replace(/[>]/g, "&gt");
@@ -8,7 +8,7 @@ function sanitize(var s){
   return replacement
 }
 
-function email_validity(var s){
+function email_validity(s){
   if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(myForm.emailAddr.value))
   {
     return true
@@ -30,11 +30,11 @@ function password_equal(){
 
 function input_sanitization() {
   var password = document.getElementById("reg_password")
-  if password != null) {
+  if (password != null) {
 	if (! /^[a-zA-Z0-9@._!()-+*^]+$/.test(password)){
 	  alert('Invalid Password. Please conform to password policy')
 	  document.getElementById("reg_password").value = "";
-	  if password_equal() {
+	  if (password_equal()) {
 	    document.getElementById("reg_confirm_password").value = "";
 	  }
 	  return false
@@ -43,7 +43,7 @@ function input_sanitization() {
   
   var arr = document.getElementsByClassName('validate_input')
   var replacement = null
-  if arr.length > 0 {
+  if (arr.length > 0) {
     for (var x = 0; x < arr.length; x++) {
       replacement = sanitize(arr[x])
       document.getElementsByClassName('validate_input')[x].value = replacement
@@ -51,9 +51,9 @@ function input_sanitization() {
   }
   
   var arr1 = document.getElementsByClassName('validate_email')
-  if arr1.length > 0{
+  if (arr1.length > 0) {
     for (var x = 0; x < arr.length; x++) {
-      if email_validity(arr1[x]) == false { 
+      if (email_validity(arr1[x]) == false) { 
 		alert('Invalid Email Address') 
 		return false 
       }

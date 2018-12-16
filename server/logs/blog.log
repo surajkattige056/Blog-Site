@@ -1,0 +1,13 @@
+192.168.0.20|-|2018-12-16 14:58:48.110140|GET|200|Open Login Page
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 14:59:22.827799|POST|200|User Authenticated
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 14:59:22.853959|GET|200|Opening home page
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:02:10.753343|POST|200|Feedback Email sent!
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:02:44.336856|GET|200|Opening home page
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:03:17.426008|GET|302|User type does not have privilege to open edit page. Redirected to home page
+192.168.0.20|-|2018-12-16 15:03:17.431585|GET|302|Session does not exist. Redirecting to login page
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:03:17.510261|GET|302|Redirected from login to home page
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:03:17.534774|GET|200|Opening home page
+192.168.0.20|-|2018-12-16 15:04:52.447563|GET|200|Open Login Page
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:05:03.161743|POST|200|User Authenticated
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:05:03.229666|GET|200|Opening home page
+192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:05:05.876023|POST|200|User logged out

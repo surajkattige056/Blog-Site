@@ -115,6 +115,11 @@
       </div>
       <br />
       <div class="jumbotron vertical-center">
+		<div align="center">
+			{% if message %}
+			  <p style="color:red;">{{ message }}</p>
+		    {% endif %}
+		</div>
 		<h5>We strive to provide good articles and design a secure website for you, hence your comments are valuable to us! Please give us a feedback on the website.</h5>
 		<form onsubmit = "return input_sanitization()" action="{{ url_for('feedback') }}" method = "post">
 			<div class="col-md-12">

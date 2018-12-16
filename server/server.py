@@ -320,16 +320,35 @@ def validate_feedback(feedback):
 	feedback = feedback.replace("/", "&#x2F");
 	return True, feedback
 
+
 # This function is used to validate the password to check if it conforms to the password rules.
 # This function will be used during the user registration to validate the passwords given there
 # @param Password given by the user during registration
+# @return True if the password is valid, False if it isn't
 def validate_password(password):
-	if(len(password) < 8):
+	if(len(password) < 8): #Checks if the password length is less than 8 characters
 		return False
-	if(re.search('.*[A-Z].*', password) and re.search('.*[a-z].*', password) and re.search('.*[0-9].*', password) and re.search('.*[@._!()-+*^].*', password)):
+	if(re.search('.*[A-Z].*', password) and re.search('.*[a-z].*', password) and re.search('.*[0-9].*', password) and re.search('.*[@._!()-+*^].*', password)): #Checks if the password conforms to the password policy
+		return True
+	if(re.search('[^A-Za-z0-9.*@._!()-+*^]+', password)): #Checks if the password contains any characters that do not conform to the password policy
+		return False
+	return False
+
+# This function will be used to validate the password that we obtain from the login page
+# Since the password will be hashed with SHA512 algorithm, the hashed password will always only contain alphanumeric characters
+# This function checks if the password recieved has only hashed passwords. If it does, return True, else return False
+# @param password recieved from the login page
+# @return Return True if it contains only alphanumeric characters, else return False
+def validate_login_password(password):
+	if password.isalpha():  # Checks if the string contains only alphanumeric characters
 		return True
 	return False
 
+# This function is used to retrieve the user type from the database
+# There are two user types in the database -'ADMIN', 'NORMAL'
+# The home page is outputed based on the user type
+# @param email address of the user
+# @return (First name, user type) if the user exists, else None, None
 def retrieve_name_user_type(email):
 	try:
 		conn = create_connection()
@@ -345,26 +364,19 @@ def retrieve_name_user_type(email):
 	except mysql.connector.errors.ProgrammingError:
 		return 503
 
+
+# This function is used to check if the password and confirm password fields from registration page have the same values or not
+# @param password and confirm password fields
+# @return Return True if they are equal, else return False
 def equal_passwords(password, confirm_password):
 	if password != confirm_password:
 		return False
 	return True
+	return 503
 
-def retrieve_user_type(email):
-	try:
-		conn = create_connection()
-		cur = conn.cursor()
-		cur.execute("SELECT User_Type FROM users WHERE Email_ID=%s", (email,))
-		rows = cur.fetchall()
-		cur.close()
-		conn.close()
-		if len(rows) == 1:
-			return rows[0]
-		return None
-	
-	except mysql.connector.errors.ProgrammingError:
-		return 503
-
+# This function will be used during page edit that is a module in the admin role
+# This function opens the home.html file and retrieves the element in the body field to populate in the text area of the edit page
+# @return Contents in <body> tag of home.html file
 def retrieve_home_page():
 	fread = open('./templates/home.html', 'r')
 	output = ""
@@ -393,359 +405,417 @@ def retrieve_home_page():
 	fread.close()
 	return output
 
+# This function will be used to write the changes done in the edit-page.html file. 
+# The contents given in the textarea will be written to the home.html and home-admin.html files
+# @param content from the text area to be inserted into the home page
+# @return True once the update is successful
 def edit_home_page(new_content):
-	files = ['./templates/home.html', './templates/home-admin.html']
+	files = ['./templates/home.html', './templates/home-admin.html'] # LIst of both the normal user and admin's home page files
 	for filename in files:
-		fread = open(filename, 'r')
-		output = ""
-		for line in fread:
-			output += line
+		fread = open(filename, 'r') # Open the file in read mode
+		output = "" # Ouput variable that will be later written into the file
+		for line in fread: #Read line after line
+			output += line # Add all the lines till it reaches it reaches the </nav> tag
 			if line.strip().startswith("</nav"):
 				break
 		
-		output += new_content
+		output += new_content # Add the new content
 		after_body_flag = False
 		for line in fread:
-			if line.strip().startswith("</body"):
-				output += line
-				after_body_flag = True
+			if line.strip().startswith("</body"): # Check when the body ends
+				output += line # Add the </body> tag
+				after_body_flag = True # Flag that indicates that the next few lines will be after the body
 		
-			if after_body_flag == True:
-				output += line
-		fread.close()
+			if after_body_flag == True: 
+				output += line # Add the contents after the body ends if anything exists
+		fread.close() # Close the file read handle
 		
-		fwrite = open(filename, 'w')
-		fwrite.write(output)
-		fwrite.close()
+		fwrite = open(filename, 'w') # Open the hom page file in write mode
+		fwrite.write(output) # Write the new content to the file
+		fwrite.close() # Close the file write handle
 	return True	
 		
 
+# This function will be called when the index or '/' path will be invoked
 @app.route('/', methods=['GET'])
 def root():
-	if 'email' in session:
-		return redirect(url_for('home'))
-	g.user = None
-	return render_template('login.html')
+	if 'email' in session: # Check if the email is present in the session
+		return redirect(url_for('home')) # if there is a session present, then redirect to the link that will be called by the function 'home()'
+	g.user = None # If no session exists, set the global variable g.user to None
+	return render_template('login.html') # Open login.html page
 
+# This function is executed before any requests goes to the user
 @app.before_request
 def before_request():
-	g.user = None
-	if 'email' in session:
-		g.user=session['email']
-	
+	g.user = None # Set the global variable g.user to None
+	if 'email' in session: #Check if there is a session present for the email
+		g.user=session['email'] #If it is present, set the g.user variable to hold the session value
+
+# This function will be used to generate a CSRF token for all the web pages
 def generate_csrf_token():
-	if '_csrf_token' not in session:
-		session['_csrf_token'] = os.urandom(128)
-	return session['_csrf_token']
+	if '_csrf_token' not in session: #Check if a CSRF token was generated for user session
+		session['_csrf_token'] = os.urandom(128) #If not generated, generate a 128 character random value and assign it to the session with key value '_csrf_token'
+	return session['_csrf_token'] # CSRF Token
 	
-app.jinja_env.globals['csrf_token'] = generate_csrf_token
+app.jinja_env.globals['csrf_token'] = generate_csrf_token #This will be called everytime a user goes to a page. There is a csrf_token() variable in all the web pages that will hold the CSRF token for the user
 	
+
+# This function will be used when the user sends the credentials to login into the website
 @app.route('/login', methods=['POST', 'GET'])
 def login():
-	if request.method == 'GET':
-		if 'email' in session:
+	if request.method == 'GET': #Check the type of request. If it is a 'GET' request, then maybe the user is forcing the login request.
+		if 'email' in session: # If a session exists, then redirect this request to the url for 'home()' function
 			return redirect(url_for('home'))
+	
+	# Else it is a 'POST' request, which it is supposed to be.
 	if 'email' in session:
 		return redirect(url_for('home'))
-	try:
-		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-			return redirect(url_for('logout'))
+	try: # This is used to handle the keyerror exception
+		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): # Check if the csrf token does not exist or if they are not equal. 
+			return redirect(url_for('error')) # redirect to the URL invoked by the function logout()
 
-	except KeyError:
+	except KeyError: #If a keyerror exists, then send the request to error() function
 		return redirect(url_for('error'))
-	email = request.form.get('email')
-	if len(email) <= 0:
-		message = "Please type the email address"
-		return render_template('login.html', message=message)
-	if len(email) > 50:
-		message = "Invalid Email"
+	email = request.form.get('email') # Retrieve the email attribute from the login page
+	if len(email) <= 0: # If email is blank
+		message = "Please enter the email address" 
+		return render_template('login.html', message=message) # Send the login.html page with the above message
+	
+	if len(email) > 50: # If the email address is greater than 50 characters, then send an error message
+		message = "Invalid Email/Password"
 		return render_template('login.html', message = message)
-	password = request.form.get('password')
-	if validate_email(email) == False:
-		message = "Invalid username/password!"
+	
+	if validate_email(email) == False: # Validate the email and check if the email is fine or not
+		message = "Invalid Email/Password!"
 		return render_template('login.html', message=message)
-	disabled = user_disabled(email)
-	if disabled == True:
+	
+	disabled = user_disabled(email) # Check if the user is disabled
+	if disabled == True: # User is disabled 
 		message = "User has been disabled! Please try again later"
 		return render_template('login.html', message=message)
-	if disabled == 503:
+	
+	if disabled == 503: # Database error. Redirect to the url of error() function
 		return redirect(url_for('error'))
-	if disabled == 400:
-		return render_template('login.html', message='Invalid Email Address/Password')
-	first_name, authenticity_flag, code = authenticate(email, password)
-	if authenticity_flag == True and code == 200:
-		if recaptcha.verify():
-			session['email'] = email
-			return redirect(url_for('home'))
+	
+	if disabled == 400: # 400 means that it is a bad request. Keeping the errors as generic as possible to prevent fuzzing
+		return render_template('login.html', message='Invalid Email/Password')
+	
+	password = request.form.get('password') # Retrieve the password attribute from the login page
+	if len(password) <= 0: # If no password was entered
+		message = "Please enter the password"
+		return render_template('login.html', message=message)
+	
+	if validate_login_password(password) == False: # If the password does not contain alphanumeric characters
+		return render_template('login.html, message="Invalid Email/Password')
+	
+	first_name, authenticity_flag, code = authenticate(email, password) #Authenticate the user
+	if authenticity_flag == True and code == 200: # The user exists
+		if recaptcha.verify(): #Check the captcha code
+			session['email'] = email #Create a user session and store the email address of the user
+			return redirect(url_for('home')) # Redirect to the home() function
 		else:
 			message = "Invalid CAPTCHA code"
 			return render_template('login.html', message=message)
-	elif authenticity_flag == True and code == 201:
-		session['email'] = email
-		return render_template('update_password.html', name=first_name)
-	elif authenticity_flag == 503:
+	
+	elif authenticity_flag == True and code == 201: # The user is authenticated, but the forgot password was used
+		session['email'] = email 
+		return render_template('update_password.html', name=first_name) #Open the update_password page
+	
+	elif authenticity_flag == 503: # Database error occurred. So redirect the user to the URL of error() function
 		return redirect(url_for('error'))
-	message = "Invalid Email Address/Password!"
-	code = update_incorrect_login(email)
-	if code != None and code == 503:
+	
+	message = "Invalid Email Address/Password!" 
+	code = update_incorrect_login(email) #The user exists but the password was incorrect
+	if code != None and code == 503: # If database error occurs, redirect to URL of error() function
 		return redirect(url_for('error'))
-	return render_template('login.html', message=message)
+	return render_template('login.html', message=message) #open login.html page and display the error message
 
 
+# This function is the URL for home page
 @app.route('/home', methods=['GET'])
 def home():
-	if 'email' in session:
-		first_name, user_type = retrieve_name_user_type(session['email'])
+	if 'email' in session: #If a session exists for the user email
+		first_name, user_type = retrieve_name_user_type(session['email']) #Retrieve the user's first name and user type
 		if first_name != None:
-			if user_type.upper() == 'NORMAL':
+			if user_type.upper() == 'NORMAL': # If the user is a normal user, display the normal user's home page
 				return render_template('/home.html', name=first_name.capitalize())
 			
-			elif user_type.upper() == 'ADMIN':
+			elif user_type.upper() == 'ADMIN': #If it is an admin page, display the admin home page
 				return render_template('/home-admin.html', name=first_name.capitalize())
-			return redirect(url_for("error"))
-		else:
-			return redirect(url_for('error'))
+			return redirect(url_for("error")) # If the user type is neither admin or normal, then there is an error. So redirect to error page
+		else: #If the user does not have a first name
+			return redirect(url_for('error')) # Redirect to the error page
 	else:
-#		return render_template('login.html')
-		return redirect(url_for('login'))
+		return redirect(url_for('root')) # If user session does not exist, then redirect to the login page
 
+# This function is the URL for error page
 @app.route('/error', methods=['GET'])
 def error():
-	return render_template('error.html')
+	return render_template('error.html') #Display the error.html page
 
+# This function will recieve the feedback from the user
 @app.route('/feedback', methods=['GET', 'POST'])
 def feedback():
-	if request.method == 'GET':
-		return redirect(url_for('home'))
+	if request.method == 'GET': # The 'GET' request will occur if a user in session tries to force a user to the feedback page. The user will be automatically redirected to the URL of the home() function
+		if g.user: # If a user session exists
+			return redirect(url_for('home')) # Redirect to the URL of home() function
+		else: # User session does not exisst
+			return redirect(url_for('error')) # Redirect to error page 
 	
-	if g.user:
+	# This is for 'POST' request, which should be the right kind of request as we are posting the contents of a feedback from a user
+	if g.user: # If the user session exists
 		try:
-			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-				return redirect(url_for('logout'))
+			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): #If the CSRF Token is either None or doesn't match, display the error page
+				return redirect(url_for('error'))
 
 		except KeyError:
 			return redirect(url_for('error'))
-		feedback = request.form.get('feedback')
-		flag, feedback = validate_feedback(feedback)
-		if flag == False:
-			first_name, user_type = retrieve_name_user_type(session['email'])
-			if user_type.upper() == 'NORMAL':
-				return render_template('home.html', name=first_name, message=result)
+		feedback = request.form.get('feedback') # Get the user feedback
+		flag, feedback = validate_feedback(feedback) #Validate the user feedback and sanitize it
+		first_name, user_type = retrieve_name_user_type(session['email']) # Retrieve the user's first name and user type
+		if flag == False: #If the feedback if not valid
+			message = "Feedback is Invalid. Please check your input and try again" # Error message
+			if user_type.upper() == 'NORMAL': # If the user_type is normal
+				return render_template('home.html', name=first_name, message=message) # Display home.html page
 			
-			elif user_type.upper() == 'ADMIN':
-				return render_template('home-admin.html', name=first_name, message=result)
+			elif user_type.upper() == 'ADMIN': # If the user is admin
+				return render_template('home-admin.html', name=first_name, message=message) # Display home-admin.html page
 			
-			else:
+			else: # If the user is neither normal or an admin, display the error page
 				return redirect(url_for('error'))
-				
-		subject = "Feedback from " + session['email']
-		message = 'Hello,\n\You have recieved the following review from the user\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog'
-		send_email(EMAIL_ADDRESS, subject, message)
-		return render_template('feedback_received.html')
+		
+		# Send the feedback of the website to the support team
+		subject = "Feedback from " + session['email'] # Subject of the email
+		message = 'Hello,\n\You have recieved the following review from the ' + first_name + '(' + session['email'] + ')\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog' # Body of the email containing the feedback of the user
+		send_email(EMAIL_ADDRESS, subject, message) # Send the email to the support team
+		return render_template('feedback_received.html') # Show the feedback_recieved.html page
 	else:
-		return render_template('login.html', message = "Invalid session")
+		return render_template('login.html', message = "Invalid session") #If the session is invalid, then display that the session is invalid
 	
+
+# This function will be used to display the registration page
 @app.route('/registration', methods=['GET'])
 def registration():
-	if g.user:
-		return redirect(url_for('home'))
-	return render_template('registration.html')
+	if g.user: #If a user exists and is trying to force himself to the registration page without logging out
+		return redirect(url_for('home')) # Redirect the user to the home page
+	return render_template('registration.html') #If a user session does not exist, then the user is free to register himself on the website
 
+# This function will be invoked when the user wants to send the registration information to the server
 @app.route('/register_user', methods=['GET', 'POST'])
 def register_user():
-	if request.method == 'GET' or g.user:
-			return redirect(url_for('home'))
+	if request.method == 'GET': # If a user invokes the 'GET' method instead of 'POST'
+		if g.user: # If a user session exists
+			return redirect(url_for('home')) # Redirect to the home page
+		else: # If a user session does not exist
+			return redirect(url_for('root')) # Redirect to the login page
+			
+	try:
+		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): 
+			return redirect(url_for('error'))
+
+	except KeyError:
+		return redirect(url_for('error'))
+	email = request.form.get('reg_email') # Retrieve the registration email attribute from the registration page
+	fName = request.form.get('reg_fname') # Retrieve first name
+	flag, result = validate_input(fName, 'First Name') # Validate the first name
+	if flag == False: # If the First name is invalid
+		return render_template('registration.html', message = result) #Send the error message to the registration page
+	lName = request.form.get('reg_lname') # Get the Last name
+	flag, result = validate_input(lName, 'Last Name') # Validate the Last name
+	if flag == False: # If last name is invalid
+		return render_template('registration.html', message = result) #send the error message to the registration page
+	
+	if validate_email(email) == False: # If email is invalid [ Note: validate_email is a python library that checks for the emails validity ] 
+		message= "Invalid Email. Please enter a valid email address"
+		return render_template('registration.html', message=message) # Send the error message to the registration Page
+	
+	password = request.form.get('password') # Retrieve the password
+	if validate_password(password) == False: # If password is invalid
+		message = "Invalid Password. Please conform to the password rules"
+		return render_template('registration.html', message=message) # send the error message to the registration page
+	
+	confirm_password=request.form.get('confirm_password') # Retrieve the confirm password field from the registration page
+	if validate_password(confirm_password) == False: # If confirm password is not valid
+		message = "Invalid Confirm Password. Please conform to the password rules"
+		return render_template('registration.html', message=message) # Send the error message to the registration page
+		
+	if equal_passwords(password, confirm_password) == False: #If both the password and confirm password values are not equal
+		message = "Both passwords are not equal. Please try again"
+		return render_template('registration.html', message=message) # Send the error message to the registration page
+		
+	email_flag = check_duplicate_email(email)
+	if email_flag == False: # If the user email does not exist in the database
+		result, code = create_new_user(email, password, fName, lName) # Insert the user into the database
+		if code == 503: # Database error occurred during the create_new_user function
+			return redirect(url_for('error')) # Redirect to theerror page
+		result = "Successful"
+		message = "Email Address has been registered successfully. Please go to the login page and log in with your email and password. Thank you for joining us!"
+		return render_template('registration_msg.html', result=result, message=message) # Display registration successful page
+	
+	elif email_flag == True: # If email address already exists in the database
+		message = "Email Address already exists"
+		
+	elif email_flag == 503: # If there is a database error during check_duplicate_email function redirect to the error page
+		return redirect(url_for('error'))
+	return render_template('registration.html', message=message) # This will be executed if the email address already exists in the database
+
+
+# This function will be used to display the forgot-password page
+@app.route('/forgot_password', methods=['GET'])
+def forgot_password():
+	if g.user: #If a session already exists and the user is trying to force himself/herself into this page
+		return redirect(url_for('home')) # Redirect to the home screen
+	return render_template('forgot_password.html') # If a user session does not exist, then display this page
+	
+@app.route('/send_recovery_password', methods=['GET', 'POST'])
+def send_recovery_password():
+	if g.user: # If a user session already exists and the user is trying to force himself/herself into this page
+		return redirect(url_for('home')) # Redirect to the home page
+	
+	
+	if request.method == 'GET': # If a user is trying to force himself/herself into this page
+			return redirect(url_for('root')) # Redirect to the login page
 			
 	try:
 		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-			return redirect(url_for('logout'))
-
-	except KeyError:
-		return redirect(url_for('error'))
-	email = request.form.get('reg_email')
-	fName = request.form.get('reg_fname')
-	flag, result = validate_input(fName, 'First Name')
-	if flag == False:
-		return render_template('registration.html', message = result)
-	lName = request.form.get('reg_lname')
-	flag, result = validate_input(lName, 'Last Name')
-	if flag == False:
-		return render_template('registration.html', message = result)
-	
-	if validate_email(email) == False:
-		message= "Invalid Email. Please enter a valid email address"
-		return render_template('registration.html', message=message)
-	
-	password = request.form.get('password')
-	if validate_password(password) == False:
-		message = "Invalid Password. Please conform to the password rules"
-		return render_template('registration.html', message=message)
-	
-	confirm_password=request.form.get('confirm_password')
-	if validate_password(confirm_password) == False:
-		message = "Invalid Confirm Password. Please conform to the password rules"
-		return render_template('registration.html', message=message)
-		
-	if equal_passwords(password, confirm_password) == False:
-		message = "Both passwords are not equal. Please try again"
-		return render_template('registration.html', message=message) 
-		
-	if check_duplicate_email(email) == False:
-		result, code = create_new_user(email, password, fName, lName)
-		if code == 503:
-			return redirect(url_for('root'))
-		result = "Successful"
-		message = "Email Address has been registered successfully. Please go to the login page and log in with your email and password. Thank you for joining us!"
-		return render_template('registration_msg.html', result=result, message=message)
-	
-	elif check_duplicate_email(email) == True:
-		message = "Email Address already exists"
-		
-	elif check_duplicate_email(email) == 503:
-		return redirect(url_for('error'))
-	return render_template('registration.html', message=message)
-
-
-@app.route('/forgot_password', methods=['GET'])
-def forgot_password():
-	if g.user:
-		return redirect(url_for('home'))
-	return render_template('forgot_password.html')
-	
-@app.route('/send_recovery_password', methods=['POST'])
-def send_recovery_password():
-	if g.user:
-		return redirect(url_for('home'))
-	try:
-		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-			return redirect(url_for('logout'))
-
-	except KeyError:
-		return redirect(url_for('error'))
-	email = request.form.get('forgot_email')
-	email_is_valid = validate_email(email)
-	if email_is_valid:
-		if check_duplicate_email(email):
-			message = "A recovery password has been sent to your email address! Please follow the steps mentioned in the mail."
-			password = generate_new_password()
-			hashed_password = hashlib.sha512(((hashlib.sha512(password.encode('UTF-8')).hexdigest()) + app.config['SALT']).encode('UTF-8')).hexdigest()
-			flag = set_forgot_password(email, hashed_password)
-			if flag == 503:
-				if 'email' in session:
-					session.pop('email', None)
-				return render_template('error.html')
-			subject = "Security Blog Forgot Password"
-			email_message = "Hello there!\n\nLooks like you forgot your password. Don't you worry! Login with this password:" + password + '\n\nThanks and Regards,\nSecurity Blog'
-			send_email(email, subject, email_message)
-			return render_template('recovery_password_sent.html', message=message)
-		elif check_duplicate_email(email) == False:
-			message = "This email has not been registered. Please <a href='http://192.168.0.16:5000/registration'>register<a>"
-			return render_template('recovery_password_sent.html', message=message)
-		
-		elif check_duplicate_email(email) == 503:
 			return redirect(url_for('error'))
-	message = "Invalid Email. Please try again"
-	return render_template('forgot_password.html', message=message)
-	
+
+	except KeyError:
+		return redirect(url_for('error'))
+	email = request.form.get('forgot_email') # Retrieve the user email who seems to have forgotten his/her password
+	email_is_valid = validate_email(email) # Check if the email is valid
+	if email_is_valid: # If the email is valid
+		email_flag = check_duplicate_email(email) # Check if the email exists in the database
+		if email_flag: #If the email exists
+			password = generate_new_password() # Generate a 16 character length random password
+			hashed_password = hashlib.sha512(((hashlib.sha512(password.encode('UTF-8')).hexdigest()) + app.config['SALT']).encode('UTF-8')).hexdigest() # database password = SHA512(SHA512(generated_password) + salt)
+			flag = set_forgot_password(email, hashed_password) # Set the flags for forgot password in the database
+			if flag == 503: # If a database error occurs in set_forgot_password function
+				return redirect(url_for('error')) # Redirect to the error page
+			subject = "Security Blog Forgot Password Steps" #Subject of the email
+			email_message = "Hello there!\n\nLooks like you forgot your password. Don't you worry! Login with this password:" + password + '\n\nThanks and Regards,\nSecurity Blog' #Body of the email containing the randomly generated password to be known only to the user
+			send_email(email, subject, email_message) # Send the email
+			message = "A recovery password has been sent to your email address! Please follow the steps mentioned in the mail." # message to be displayed on the recovery_password_sent.html page
+			return render_template('recovery_password_sent.html', message=message) # Display the recovery_password_sent page with the success message
+		
+		elif email_flag == False: # If the email does not exist in the database
+			message = "This email has not been registered" # Ask the user to register
+			return render_template('recovery_password_sent.html', message=message) # Display the prompt asking for user to register his/her email on the website
+		
+		elif email_flag == 503: # If check_duplicate_email throws a database error, redirect to the error page
+			return redirect(url_for('error'))
+	message = "Invalid Email. Please try again" # If the email is not valid
+	return render_template('forgot_password.html', message=message) # Display the error message on forgot_password page
+
+# This function displays the update password page	
 @app.route('/change_password', methods=['GET'])
 def change_password():
-	if g.user:
-		return redirect(url_for('home'))
-	return render_template('update_password.html')
+	if g.user: # If a user session already exists and the user is trying to force himself/herself into this page
+		return redirect(url_for('home')) # redirect the user to the home page
+	return render_template('update_password.html') # If a user session does not exist, then display the update_password.html page
 
-
-@app.route('/edit-page', methods=['GET'])
-def edit_page():
-	if g.user:
-		content = retrieve_home_page()
-		return render_template('edit_page.html', content=content)
-	return redirect(url_for('root'))
-
+# This function is used to change the password of a user
 @app.route('/update_password', methods=['GET', 'POST'])
 def update_password():
-	if request.method == 'GET':
-		return redirect(url_for('home'))
+	if request.method == 'GET': # If a user is trying to force himself/herself into this page
+		if g.user: # If a session exists
+			return redirect(url_for('home')) # Redirect the user to the home page
+		else: # If a session does not exist
+			return redirect(url_for('root')) # Redirect the user to the login page
 		
-	if g.user:
+	# This code is used when the request is a 'POST' method.
+	if g.user: # If a user session exists
 		try:
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-				return redirect(url_for('logout'))
+				return redirect(url_for('error'))
 
 		except KeyError:
 			return redirect(url_for('error'))
-		password = request.form.get('update_password')
-		confirm_password = request.form.get('update_confirm_password')
-		if password != confirm_password:
+		password = request.form.get('update_password') # Retrieve the update_password field from the web page
+		confirm_password = request.form.get('update_confirm_password') # Retrieve the update_confirm_password field from the webpage
+		if password != confirm_password: # If both fields are not equal
 			message = "The password fields do not match"
-			return render_template('update_password.html', message=message)
-		if validate_password(password) == False:
+			return render_template('update_password.html', message=message) # Display the error message on update_password page
+		if validate_password(password) == False: # If password is not valid
 			message = "Invalid password. Please conform to the password policy and try again."
-			return render_template('update_password.html', message=message)
+			return render_template('update_password.html', message=message) # Display the error message on update_password page
 		try:
-			password = hashlib.sha512(((hashlib.sha512(password.encode('UTF-8')).hexdigest()) + app.config['SALT']).encode('UTF-8')).hexdigest()
-			conn = create_connection()
+			password = hashlib.sha512(((hashlib.sha512(password.encode('UTF-8')).hexdigest()) + app.config['SALT']).encode('UTF-8')).hexdigest() # Database password = SHA512(SHA512(password) + salt)
+			conn = create_connection() # Connect to the database
 			cur = conn.cursor()
-			cur.execute("UPDATE users SET Password = %s, Forgot_Password_Generated=NULL, Forgot_Password_Flag = 0, Incorrect_Login_Count = 0 WHERE Email_ID = %s", (password, session['email']))
-			conn.commit()
+			cur.execute("UPDATE users SET Password = %s, Forgot_Password_Generated=NULL, Forgot_Password_Flag = 0, Incorrect_Login_Count = 0 WHERE Email_ID = %s", (password, session['email'])) # Update the user's password in the database
+			conn.commit() # Commit the changes
 			cur.close()
 			conn.close()
 			
 		except mysql.connector.errors.ProgrammingError:
 			return redirect(url_for('error')) 
 			
-		if g.user:
-			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-				redirect(url_for('home'))
-			g.user = None
-			session.pop('email', None)
-			session.pop('_csrf_token', None)
-		return render_template('password_changed.html', message='Password Changed Successfully!')
+			g.user = None # Remove the user session from the global variable
+			session.pop('email', None) # Remove the email id from the session
+			session.pop('_csrf_token', None) # Remove the csrf token value from the session
+		return render_template('password_changed.html', message='Password Changed Successfully!') # Display the password changed successfully message on password_changed page
 
 
-@app.route('/edit-page-successful', methods=['POST'])
+# This function is used to populate the textarea in edit homepage page used by the admin user
+@app.route('/edit-page', methods=['GET'])
+def edit_page():
+	if g.user: # If a user session exists
+		content = retrieve_home_page() # Retrieve the contents of the homepage
+		return render_template('edit_page.html', content=content) # Display the edit-page webpage and populate the contents of the textarea with the contents of the home page to be edited
+	return redirect(url_for('root'))
+	
+# This page will be displayed when the home page is to be edited
+@app.route('/edit-page-successful', methods=['GET', 'POST'])
 def edit_page_successful():
-	if g.user:
+	if g.user: # If a user session exists
+		if request.method == 'GET': # Check if the user is trying to force himself/herself into this webpage using 'GET' request
+			return redirect(url_for('home')) #If yes, then redirect to the home page
+		
+		# This body is for 'POST' request, as it is supposed to be.
 		try:
-			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-				return redirect(url_for('logout'))
+			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']): # Check if the CSRF Token is invalid
+				return redirect(url_for('error'))
 
 		except KeyError:
 			return redirect(url_for('error'))
-		result = edit_home_page(request.form.get('edit_page_content'))
-		if result == True:
-			return render_template('edit_page_successful.html')
+		result = edit_home_page(request.form.get('edit_page_content')) # Get the contents from the textarea of the edit page and edit the home pages
+		if result == True: # If the home pages was edited successfully
+			return render_template('edit_page_successful.html') # Display home page edited successfully page
 		
-		elif result == False:
-			return redirect(url_for('edit_page_failed'))
+		elif result == False: # If there was a problem in editing the home page
+			return redirect(url_for('edit_page_failed')) # Redirect to the edit_page_failed function below
 			
-		return redirect(url_for('error'))
+		return redirect(url_for('error')) # Else some other error occurred. Just display the error page to keep it generic and avoid fuzzing and catching all the errors.
 	
-	return redirect(url_for('logout'))
+	return redirect(url_for('root')) # If a user session does not exist, then redirect to the login page
 		
 
+# This function will be called if for some reason, the page edit was unsuccessful
 @app.route('/edit-page-failed', methods=['GET'])
 def edit_page_failed():
-	if g.user:
-		return render_template('edit_page.html', message="Page edit was unsuccessful. Please try again")
+	if g.user: # If a user session exists
+		return render_template('edit_page.html', message="Page edit was unsuccessful. Please try again") # Display the edit_page with the error message stating the page edit was unsuccessful
 	
-	else:
-		return redirect(url_for('logout'))
+	else: # If a user session does not exist
+		return redirect(url_for('root')) # Redirect to the login page
 	
+# This function will be invoked when the user wants to log out
 @app.route('/logout',methods=['GET', 'POST'])
 def logout():
 	if g.user:
 		try:
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
-				return redirect(url_for('logout'))
+				return redirect(url_for('error'))
 
 		except KeyError:
 			return redirect(url_for('error'))
-		g.user = None
-		session.pop('email', None)
-		session.pop('_csrf_token', None)
+		g.user = None # Remove the user from the global session variable
+		session.pop('email', None) # Remove the user's email ID from the session
+		session.pop('_csrf_token', None) # Remove the CSRF Token value from the session
 		
 	
-	return render_template('login.html', message='User has been logged out')
+	return render_template('login.html', message='User has been logged out') # Show the login page with message "User has been logged out"
 
 
 

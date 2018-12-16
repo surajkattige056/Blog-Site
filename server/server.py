@@ -349,7 +349,7 @@ def retrieve_home_page():
 				nav_flag = False
 			
 			elif nav_flag == False:
-				output += line + "\n"
+				output += line
 		
 	fread.close()
 	return output

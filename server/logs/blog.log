@@ -11,3 +11,25 @@
 192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:05:03.161743|POST|200|User Authenticated
 192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:05:03.229666|GET|200|Opening home page
 192.168.0.20|suraj.kattige056@gmail.com|2018-12-16 15:05:05.876023|POST|200|User logged out
+192.168.0.14|-|2018-12-16 15:08:29.353324|GET|200|Open Login Page
+192.168.0.14|suraj.kattige056@gmail.com|2018-12-16 15:08:41.445065|POST|200|User Authenticated
+192.168.0.14|suraj.kattige056@gmail.com|2018-12-16 15:08:41.498449|GET|200|Opening home page
+192.168.0.14|-|2018-12-16 15:09:02.596260|POST|302|Session does not exist. Redirecting to login page
+192.168.0.14|-|2018-12-16 15:09:02.634802|GET|200|Open Login Page
+192.168.0.14|suraj.kattige056@gmail.com|2018-12-16 15:09:10.802925|GET|200|Opening home page
+192.168.0.14|suraj.kattige056@gmail.com|2018-12-16 15:09:12.988041|POST|200|User logged out
+192.168.0.20|-|2018-12-16 16:06:18.038709|GET|200|Open Login Page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:06:35.873560|POST|200|User Authenticated
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:06:35.904702|GET|200|Opening admin home page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:06:38.480260|GET|200|Redirected to edit page
+192.168.0.20|-|2018-12-16 16:06:50.407434|GET|302|User type Invalid. Redirected to error page
+192.168.0.20|-|2018-12-16 16:06:50.458558|GET|200|Open error page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:07:06.136279|GET|302|Redirected from login to home page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:07:06.180513|GET|200|Opening admin home page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:10:38.767550|POST|200|User logged out
+192.168.0.20|-|2018-12-16 16:11:17.613530|GET|200|Open Login Page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:11:29.627438|POST|200|User Authenticated
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:11:29.650615|GET|200|Opening admin home page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:11:32.316094|GET|200|Redirected to edit page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:11:40.923040|GET|200|Home page edited successfully. Redirecting to edit successful page
+192.168.0.20|blog.email056@gmail.com|2018-12-16 16:11:42.773732|GET|200|Opening admin home page

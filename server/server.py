@@ -878,7 +878,7 @@ def edit_page_successful():
 			logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "302", "User type does not have privilege to open edit page. Redirected to home page")
 			return redirect(url_for('root')) # Redirect to the login page
 	
-	if user_type != 'NORMAL' or user_type != 'ADMIN': # If the user is neither a normal user, nor an admin
+	if user_type.upper() != 'NORMAL' and user_type.upper() != 'ADMIN': # If the user is neither a normal user, nor an admin
 		logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "302", "User type Invalid. Redirected to error page")
 		return redirect(url_for('error')) # Redirect the user to the error page
 	if g.user: # If a user session exists

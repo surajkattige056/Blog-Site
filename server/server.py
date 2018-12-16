@@ -231,7 +231,7 @@ def check_last_login(email):
 	try:
 		conn = create_connection()
 		cur  = conn.cursor()
-		cur.execute("SELECT TIME_TO_SEC(NOW()) - TIME_TO_SEC(Last_Login_Attempt) FROM users WHERE Email_ID = %s", (email,)) #Calculate the difference between the last incorrect login attempt and the current time
+		cur.execute("SELECT TIME_TO_SEC(TIMEDIFF(NOW(),Last_Login_Attempt)) FROM users WHERE Email_ID = %s", (email,)) #Calculate the difference between the last incorrect login attempt and the current time
 		rows = cur.fetchone()
 		if int(rows[0]) > 300: # If 5 minutes have passed (5 * 60 seconds = 300)
 			cur.execute("UPDATE users SET Incorrect_Login_Count = 0, Disabled = 0 WHERE Email_ID=%s", (email,)) # THe user is not disabled anymore. Set the incorrect login count and disabled flag to 0

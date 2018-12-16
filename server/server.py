@@ -282,17 +282,17 @@ def validate_password(password):
 		return True
 	return False
 
-def retrieve_first_name(email):
+def retrieve_name_user_type(email):
 	try:
 		conn = create_connection()
 		cur = conn.cursor()
-		cur.execute("SELECT FName FROM users WHERE Email_ID = %s", (email,))
+		cur.execute("SELECT FName, User_Type FROM users WHERE Email_ID = %s", (email,))
 		rows = cur.fetchone()
 		cur.close()
 		conn.close()
 		if len(rows)>0:
-			return rows[0]
-		return None
+			return rows[0], rows[1]
+		return None, None
 	
 	except mysql.connector.errors.ProgrammingError:
 		return 503
@@ -301,6 +301,85 @@ def equal_passwords(password, confirm_password):
 	if password != confirm_password:
 		return False
 	return True
+
+def retrieve_user_type(email):
+	try:
+		conn = create_connection()
+		cur = conn.cursor()
+		cur.execute("SELECT User_Type FROM users WHERE Email_ID=%s", (email,))
+		rows = cur.fetchall()
+		cur.close()
+		conn.close()
+		if len(rows) == 1:
+			return rows[0]
+		return None
+	
+	except mysql.connector.errors.ProgrammingError:
+		return 503
+
+def retrieve_home_page():
+	fread = open('./templates/home.html', 'r')
+	output = ""
+	body_flag = False
+	nav_flag = False
+	for line in fread:
+		if line.strip().startswith("<body"):
+			body_flag = True
+		elif line.strip().startswith("</body"):
+			body_flag = False
+		if body_flag == True:
+			
+			output += line
+#			if line.strip().startswith("<script"):
+#				script_flag = True
+			
+#			if line.strip().endswith("</script"):
+#				script_flag = False
+			
+#			elif line.strip().startswith("</script"):
+#				script_flag = False
+			
+			if line.strip().startswith("<nav"):
+				nav_flag = True
+			
+			if line.strip().endswith("</nav"):
+				nav_flag = False
+			
+			elif line.strip().startswith("</nav"):
+				nav_flag = False
+			
+			elif nav_flag == False:
+				output += line + "\n"
+		
+	fread.close()
+	return output
+
+def edit_home_page(new_content):
+	files = ['./templates/home.html', './templates/home-admin.html']
+	for filename in files:
+		fread = open(filename, 'r')
+		output = ""
+		for line in fread:
+			output += line
+			if line.strip().startswith("</nav"):
+				break
+		
+		output += new_content
+		after_body_flag = False
+		for line in fread:
+			if line.strip().startswith("</body"):
+				output += line
+				after_body_flag = True
+		
+			if after_body_flag == True:
+				output += line
+		fread.close()
+		
+		fwrite = open(filename, 'w')
+		fwrite.write(output)
+		fwrite.close()
+	return True	
+		
 
 @app.route('/', methods=['GET'])
 def root():
@@ -373,14 +452,23 @@ def login():
 @app.route('/home', methods=['GET'])
 def home():
 	if 'email' in session:
-		first_name = retrieve_first_name(session['email'])
+		first_name, user_type = retrieve_name_user_type(session['email'])
 		if first_name != None:
-			return render_template('/home.html', name=first_name.capitalize())
+			if user_type.upper() == 'NORMAL':
+				return render_template('/home.html', name=first_name.capitalize())
+			
+			elif user_type.upper() == 'ADMIN':
+				return render_template('/home-admin.html', name=first_name.capitalize())
+			return redirect(url_for("error"))
 		else:
-			return render_template('error.html')
+			return redirect(url_for('error'))
 	else:
 #		return render_template('login.html')
 		return redirect(url_for('login'))
+
+@app.route('/error', methods=['GET'])
+def error():
+	return render_template('error.html')
 
 @app.route('/feedback', methods=['GET', 'POST'])
 def feedback():
@@ -394,7 +482,16 @@ def feedback():
 		feedback = request.form.get('feedback')
 		flag, feedback = validate_feedback(feedback)
 		if flag == False:
-			return render_template('home.html', message=result) 
+			first_name, user_type = retrieve_name_user_type(session['email'])
+			if user_type.upper() == 'NORMAL':
+				return render_template('home.html', name=first_name, message=result)
+			
+			elif user_type.upper() == 'ADMIN':
+				return render_template('home-admin.html', name=first_name, message=result)
+			
+			else:
+				return redirect(url_for('error'))
+				
 		subject = "Feedback from " + session['email']
 		message = 'Hello,\n\You have recieved the following review from the user\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog'
 		send_email(EMAIL_ADDRESS, subject, message)
@@ -447,7 +544,7 @@ def register_user():
 	if check_duplicate_email(email) == False:
 		result, code = create_new_user(email, password, fName, lName)
 		if code == 503:
-			return redirect(url_for('index'))
+			return redirect(url_for('root'))
 		result = "Successful"
 		message = "Email Address has been registered successfully. Please go to the login page and log in with your email and password. Thank you for joining us!"
 		return render_template('registration_msg.html', result=result, message=message)
@@ -499,6 +596,14 @@ def change_password():
 		return redirect(url_for('home'))
 	return render_template('update_password.html')
 
+
+@app.route('/edit-page', methods=['GET'])
+def edit_page():
+	if g.user:
+		return redirect(url_for('home'))
+	content = retrieve_home_page()
+	return render_template('edit_page.html')
+
 @app.route('/update_password', methods=['GET', 'POST'])
 def update_password():
 	if request.method == 'GET':
@@ -526,7 +631,7 @@ def update_password():
 			conn.close()
 			
 		except mysql.connector.errors.ProgrammingError:
-			return render_template('error.html')
+			return redirect(url_for('error')) 
 			
 		if g.user:
 			if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
@@ -535,7 +640,32 @@ def update_password():
 			session.pop('email', None)
 			session.pop('_csrf_token', None)
 		return render_template('password_changed.html', message='Password Changed Successfully!')
+
+
+@app.route('/edit-page-successful', methods=['POST'])
+def edit_page_successful():
+	if g.user:
+		if request.form.get('_csrf_token') == None or request.form.get('_csrf_token') != str(session['_csrf_token']):
+			return redirect(url_for('logout'))
+		result = edit_home_page(request.form.get('edit_page_content'))
+		if result == True:
+			return render_template('edit_page_successful.html')
+		
+		elif result == False:
+			return redirect(url_for('edit_page_failed'))
+			
+		return redirect(url_for('error'))
 	
+	return redirect(url_for('logout'))
+		
+
+@app.route('/edit-page-failed', methods=['GET'])
+def edit_page_failed():
+	if g.user:
+		return render_template('edit_page.html', message="Page edit was unsuccessful. Please try again")
+	
+	else:
+		return redirect(url_for('logout'))
 	
 @app.route('/logout',methods=['GET', 'POST'])
 def logout():

@@ -623,7 +623,7 @@ def feedback():
 		
 		# Send the feedback of the website to the support team
 		subject = "Feedback from " + session['email'] # Subject of the email
-		message = 'Hello,\n\You have recieved the following review from the ' + first_name + '(' + session['email'] + ')\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog' # Body of the email containing the feedback of the user
+		message = 'Hello,\n\nYou have recieved the following review from the ' + first_name + '(' + session['email'] + ')\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog' # Body of the email containing the feedback of the user
 		send_email(EMAIL_ADDRESS, subject, message) # Send the email to the support team
 		logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "200", "Feedback Email sent!")
 		return render_template('feedback_received.html') # Show the feedback_recieved.html page
@@ -661,6 +661,7 @@ def register_user():
 		logger(request.remote_addr, '-' , str(datetime.datetime.now()), 'POST', "500", "CSRF Key error")
 		return redirect(url_for('error'))
 	email = request.form.get('reg_email') # Retrieve the registration email 
+	fName = request.form.get('reg_fname')
 	lName = request.form.get('reg_lname') # Get the Last name
 	password = request.form.get('password') # Retrieve the password
 	confirm_password=request.form.get('confirm_password') # Retrieve the confirm password field from the registration page

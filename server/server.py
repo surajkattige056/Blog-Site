@@ -623,7 +623,7 @@ def feedback():
 		
 		# Send the feedback of the website to the support team
 		subject = "Feedback from " + session['email'] # Subject of the email
-		message = 'Hello,\n\nYou have recieved the following review from the ' + first_name + '(' + session['email'] + ')\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog' # Body of the email containing the feedback of the user
+		message = 'Hello,\n\nYou have recieved the following review from ' + first_name + '(' + session['email'] + ')\n\n"' + feedback + '"\n\nThanks and Regards,\nSecurity Blog' # Body of the email containing the feedback of the user
 		send_email(EMAIL_ADDRESS, subject, message) # Send the email to the support team
 		logger(request.remote_addr, g.user , str(datetime.datetime.now()), 'POST', "200", "Feedback Email sent!")
 		return render_template('feedback_received.html') # Show the feedback_recieved.html page

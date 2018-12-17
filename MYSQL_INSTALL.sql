@@ -48,9 +48,6 @@ CREATE USER IF NOT EXISTS 'authenticator'@'localhost' IDENTIFIED BY '!@#Thisisth
 GRANT ALL PRIVILEGES ON blog.* TO 'authenticator'@'localhost';
 
 
-# File for logging
-sudo mkdir -p ./server/logs
-sudo touch ./server/logs/blog.log
 
 
 

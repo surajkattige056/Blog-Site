@@ -39,3 +39,8 @@ sudo mysql -u root -p"$PASSWORD" < ./MYSQL_INSTALL.sql
 
 echo -e "\nDatabase Installation Successful\n\n"
 
+
+# File for logging
+sudo mkdir -p ./server/logs
+sudo touch ./server/logs/blog.log
+

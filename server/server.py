@@ -431,7 +431,7 @@ def edit_home_page(new_content):
 				output += line # Add the </body> tag
 				after_body_flag = True # Flag that indicates that the next few lines will be after the body
 		
-			if after_body_flag == True: 
+			elif after_body_flag == True: 
 				output += line # Add the contents after the body ends if anything exists
 		fread.close() # Close the file read handle
 		

@@ -31,10 +31,10 @@
 		  {% endif %}
           <form onsubmit= "return password_sha512() && input_sanitization()" action="{{ url_for('login') }}" method="post">
             Email Address:<br>
-            <input class = "validate_email" type="email" pattern = ".{,50}" name="email" maxlength="50"required>
+            <input class = "validate_email" type="email" pattern = ".{,50}" name="email" maxlength="50" required >
             <br>
             Password:<br>
-            <input id="login_password" class = "validate_input" type='password' name="password" required title="8 characters minimum">
+            <input id="login_password" class = "validate_input" type="password" name="password" required title="8 characters minimum">
             <br />
             <p>{{ recaptcha }}</p>
             <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
@@ -59,3 +59,4 @@
 	}
 	</script>
   </body>
+</html>

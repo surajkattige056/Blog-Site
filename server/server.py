@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, g
+#from flask_session import Session
+import werkzeug
 from flask_recaptcha import ReCaptcha
 from validate_email import validate_email
 import json
@@ -20,9 +22,12 @@ from subprocess import call
 
 # These are the initial configurations
 app = Flask(__name__)
-recaptcha = ReCaptcha(app=app)
+recaptcha = ReCaptcha()
+recaptcha.init_app(app)
 app.secret_key = os.urandom(128) #This generates a random alphanumeric characters of length 128. This is used as a secret key for the session
 app.config['SALT'] = '8391JSDKjskajjfgajsO@91@!*>/' #This is the salt that is used to combine with the password adding another layer of security in the application
+#SESSION_COOKIE_SECURE = True
+#Session(app)
 
 # This is a list of characters that will be used to generate a random password in generate_new_password function
 LIST_OF_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
@@ -33,18 +38,18 @@ LIST_OF_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'
 # This is a function to create a connection with MYSQL.
 # Note: MYSQL Server should be running else this will fail
 def create_connection():
-    try:
-        conn = mysql.connector.connect(
-            host='localhost',
-            user='authenticator',
-            password='!@#Thisistheauthenticator123',
-            database='blog')
-        return conn
+	try:
+		conn = mysql.connector.connect(
+			host='localhost',
+			user='authenticator',
+			password='!@#Thisistheauthenticator123',
+			database='blog')
+		return conn
 	
 # MYSQL COnnection Error will be handled here
-    except mysql.connector.Error as e:
-        print(e)
-    return None
+	except mysql.connector.Error as e:
+		print(e)
+	return None
 
 # Support is an email where all the feedback from the users will be sent.
 # This function connects to the database and retrieves the email and password of the support team.
@@ -69,16 +74,16 @@ EMAIL_ADDRESS, PASSWORD = support_email()
 # This function is used to send an email to the target.
 # @param email address of the target, subject of the email, message is the body of the email
 def send_email(target_email, subject, message):
-    try:
-        server = smtplib.SMTP('smtp.gmail.com:587') #This is the SMTP server of gmail operating on port 587
-        server.ehlo()
-        server.starttls() #Starts a secure SSL/TLS connection
-        server.login(EMAIL_ADDRESS, PASSWORD) #Login to the server using the email address and password of the support
-        msg = 'Subject: {}\n\n{}' .format(subject, message) #Write the subject and body.
-        server.sendmail(EMAIL_ADDRESS, target_email, msg) #Send the email to the target
-        server.quit() #Close the connection with the gmail SMTP server.
-    except:
-        return 'Server Error', 500 #If the server cannot be connected, return a server error with error code 500
+	try:
+		server = smtplib.SMTP('smtp.gmail.com:587') #This is the SMTP server of gmail operating on port 587
+		server.ehlo()
+		server.starttls() #Starts a secure SSL/TLS connection
+		server.login(EMAIL_ADDRESS, PASSWORD) #Login to the server using the email address and password of the support
+		msg = 'Subject: {}\n\n{}' .format(subject, message) #Write the subject and body.
+		server.sendmail(EMAIL_ADDRESS, target_email, msg) #Send the email to the target
+		server.quit() #Close the connection with the gmail SMTP server.
+	except:
+		return 'Server Error', 500 #If the server cannot be connected, return a server error with error code 500
 
 
 # Check if the email already exists in the database
@@ -373,7 +378,6 @@ def equal_passwords(password, confirm_password):
 	if password != confirm_password:
 		return False
 	return True
-	return 503
 
 # This function will be used during page edit that is a module in the admin role
 # This function opens the home.html file and retrieves the element in the body field to populate in the text area of the edit page
@@ -439,6 +443,26 @@ def edit_home_page(new_content):
 def logger (ip_address, user, timestamp, request_type, http_code, message):
 	os.system('echo "' + ip_address + "|" + user + "|" + timestamp + "|" + request_type + "|" + http_code + "|" + message + '" >> ./logs/blog.log')
 
+
+@app.errorhandler(404)
+def page_not_found(e):
+	if 'email' in session:
+		logger(request.remote_addr, session['email'], str(datetime.datetime.now()), 'GET', "400", "Bad URL")
+	else:
+		logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "400", "Bad URL")
+	return redirect(url_for('error'))
+
+@app.errorhandler(werkzeug.exceptions.BadRequest)
+def handle_bad_request(e):
+	if 'email' in session:
+		logger(request.remote_addr, session['email'], str(datetime.datetime.now()), 'GET', "400", "Bad URL")
+	else:
+		logger(request.remote_addr, '-', str(datetime.datetime.now()), 'GET', "400", "Bad URL")
+	return redirect(url_for('error'))
+	
+app.register_error_handler(400, handle_bad_request)
+
+
 # This function will be called when the index or '/' path will be invoked
 @app.route('/', methods=['GET'])
 def root():
@@ -456,6 +480,8 @@ def before_request():
 	g.user = None # Set the global variable g.user to None
 	if 'email' in session: #Check if there is a session present for the email
 		g.user=session['email'] #If it is present, set the g.user variable to hold the session value
+#	if 'key' not in session:
+#		app.secret_key = os.urandom(128)
 
 # This function will be used to generate a CSRF token for all the web pages
 def generate_csrf_token():

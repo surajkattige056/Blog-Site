@@ -19,6 +19,7 @@ sudo apt-get install python3-dns
 sudo -H pip3 install flask
 sudo -H pip3 install flask-recaptcha
 sudo -H pip3 install validate_email
+sudo -H pip3 install Flask-Session
 sudo -H python3 -m pip install mysql-connector
 sudo -H pip3 install PyJWT
 sudo -H pip3 install requests

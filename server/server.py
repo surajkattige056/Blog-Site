@@ -332,7 +332,7 @@ def validate_feedback(feedback):
 # @param Password given by the user during registration
 # @return True if the password is valid, False if it isn't
 def validate_password(password):
-	if(len(password) < 8): #Checks if the password length is less than 8 characters
+	if(len(password) < 10): #Checks if the password length is less than 8 characters
 		return False
 	if(re.search('.*[A-Z].*', password) and re.search('.*[a-z].*', password) and re.search('.*[0-9].*', password) and re.search('.*[@._!()-+*^].*', password)): #Checks if the password conforms to the password policy
 		return True

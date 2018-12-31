@@ -14,17 +14,17 @@ This is a secure blog website that is secure against OWASP top 10 Vulnerabilitie
 
 Requirements:
 -------------
-python = 3.5 or above
-python3-pip
-mysql-server
-python3-dns
-flask
-flask-recaptcha
-validate_email
-Flask-Session
-mysql-connector
-PyJWT
-requests
+python = 3.5 or above<br>
+python3-pip<br>
+mysql-server<br>
+python3-dns<br>
+flask<br>
+flask-recaptcha<br>
+validate_email<br>
+Flask-Session<br>
+mysql-connector<br>
+PyJWT<br>
+requests<br>
 
 How to use it?
 --------------

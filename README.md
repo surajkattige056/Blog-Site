@@ -12,8 +12,8 @@ This is a secure blog website that is secure against OWASP top 10 Vulnerabilitie
 6) Generic Error page to handle bad and invalid requests to protect against fuzzing
 7) Input sanitization to protect against XSS and SQL injection attacks
 
-Requirements:
--------------
+Requirements
+------------
 python = 3.5 or above<br>
 python3-pip<br>
 mysql-server<br>

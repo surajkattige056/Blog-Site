@@ -28,18 +28,18 @@ requests
 
 How to use it?
 --------------
-1) Run the install_requirements script on the server using the command below
-<i><b>Command:</b> sudo ./install_requirements</i>
-or
-<i><b>Command:</b> sudo bash install_requirements</i>
+1) Run the install_requirements script on the server using the command below<br>
+<i><b>Command:</b> sudo ./install_requirements</i><br>
+or<br>
+<i><b>Command:</b> sudo bash install_requirements</i><br>
 
-2) Navigate to the server folder
-<i><b>Command:</b> cd server</i>
+2) Navigate to the server folder<br>
+<i><b>Command:</b> cd server</i><br>
 
-3) Start the wsgi server
-<i><b>Command:</b> sudo python3 wsgi.py</i>
+3) Start the wsgi server<br>
+<i><b>Command:</b> sudo python3 wsgi.py</i><br>
 
-4) Now the server is running on port 5000. On the client side, open the webpage by typing the ip address and port number
+4) Now the server is running on port 5000. On the client side, open the webpage by typing the ip address and port number<br>
 <i><b>Syntax</b>: https://server_ip:5000/</i>
 
 5) Since this website uses self-signed digital certificates, the CA certificate should be added to the client browser. So initially it will give you an exception. Click on advanced button and allow the exception to access the webpage.
